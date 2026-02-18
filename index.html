@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Liberty — Readiness Map</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-padding-top: 120px; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0d1117; color: #e2e8f0; min-height: 100vh; overflow-x: auto; }
+button { font-family: inherit; }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #0d1117; }
+::-webkit-scrollbar-thumb { background: #1e2a3a; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script type="text/babel">
+const { useState } = React;
+
+const PHASES_D1 = [
+  { id: "target",    label: "Targeting",    dates: "Now → Feb 28",   accent: "#60a5fa" },
+  { id: "mobilize",  label: "Mobilization", dates: "Mar 1 → Mar 31", accent: "#a78bfa" },
+  { id: "readiness", label: "Readiness",    dates: "Apr 1 → Apr 30", accent: "#fbbf24" },
+  { id: "exec",      label: "⚡ Day-1",      dates: "~May 1 + 72hrs", accent: "#f87171" },
+];
+
+const PHASES_TSA = [
+  { id: "stabilize", label: "Stabilize",  dates: "D-1 → Month 2", accent: "#34d399" },
+  { id: "enable",    label: "Enable",     dates: "Month 2 → 4",   accent: "#10b981" },
+  { id: "migrate",   label: "Migrate",    dates: "Month 4 → 6",   accent: "#059669" },
+  { id: "exit",      label: "✓ TSA Exit", dates: "~Month 6",      accent: "#6ee7b7" },
+];
+
+const STATUS = {
+  red:   { bg: "rgba(239,68,68,0.12)",   text: "#fca5a5", border: "rgba(239,68,68,0.3)",   label: "Critical" },
+  amber: { bg: "rgba(251,191,36,0.10)",  text: "#fcd34d", border: "rgba(251,191,36,0.3)",  label: "At Risk"  },
+  green: { bg: "rgba(52,211,153,0.10)",  text: "#6ee7b7", border: "rgba(52,211,153,0.3)",  label: "On Track" },
+  blue:  { bg: "rgba(96,165,250,0.10)",  text: "#93c5fd", border: "rgba(96,165,250,0.25)", label: "Planned"  },
+  gray:  { bg: "rgba(107,114,128,0.10)", text: "#9ca3af", border: "rgba(107,114,128,0.2)", label: "Deferred" },
+};
+
+const LANES = [
+  { id: "ocm",       label: "OCM / Comms",           accent: "#8b5cf6" },
+  { id: "training",  label: "Training & Enablement",  accent: "#0ea5e9" },
+  { id: "identity",  label: "Identity & Access",      accent: "#ef4444" },
+  { id: "workplace", label: "Workplace / Google",     accent: "#f59e0b" },
+  { id: "apps",      label: "Corporate Apps",         accent: "#10b981" },
+  { id: "infra",     label: "Infrastructure",         accent: "#6366f1" },
+  { id: "support",   label: "Support (iCare)",        accent: "#ec4899" },
+  { id: "hr",        label: "HR / People & Org",      accent: "#f97316" },
+];
+
+const TASKS_D1 = {
+  ocm: {
+    target:    [
+      { label: "🚨 Confirm Day-1 Date",  status: "red",   detail: "Day-1 confirmed as May 1, 2026. All procurement, printing, and staffing timelines should now be anchored to this date. Verify all workstream leads have updated their plans accordingly." },
+      { label: "Lock MVEE Definition",   status: "amber", detail: "Define binary Day-1 success: Can I log in? Can I reach my apps? Do I know who to call? Get Paul/Marc sign-off to prevent scope creep." },
+    ],
+    mobilize:  [
+      { label: "Manager Cascade Pack",   status: "blue",  detail: "Scripted talking points for site managers. Core message: 'This change is permanent.' Counters the Suez middle-manager pocket veto. Due 2 weeks before close." },
+      { label: "Integration Narrative",  status: "blue",  detail: "Draft the Change Story — the strategic why behind the integration. Aligns once Cecilia locks the Day-1 Target Operating Model." },
+    ],
+    readiness: [
+      { label: "Suez Leadership Deck",   status: "amber", detail: "7 Suez lessons → concrete leadership actions for Marc. Each slide = one decision required. In progress." },
+      { label: "Go/No-Go Brief",         status: "blue",  detail: "Evidence-based SteerCo brief: CIA completion %, MVEE checklist, Heat Map color, War Room staffed Y/N." },
+    ],
+    exec: [
+      { label: "2× Daily Pulse Checks",  status: "amber", detail: "8AM / 4PM stand-ups in Command Center. OCM updates Single Front Door FAQ in real-time based on top 3 ticket types." },
+      { label: "Rumor Control Active",   status: "blue",  detail: "Monitor for 'wait it out' behavior. Deploy manager cascade reinforcement if field resistance spikes." },
+    ],
+  },
+  training: {
+    target:    [
+      { label: "CIA Training Scope Map",     status: "green", detail: "Completed. Each CIA entry mapped to modality: self-service QRG, virtual, or in-person. Priority order confirmed: Google WS (all users), MFA (all users), SAP/Ariba (Finance/Procurement). Matt Baker functioning as Training Coordinator — dedicated external resource no longer required." },
+    ],
+    mobilize:  [
+      { label: "KoP Hub Setup",              status: "blue",  detail: "Secure King of Prussia training room for 100+ users. Reserve 50 Chromebooks from TracyAnn bulk order. Hotel conference room as contingency." },
+      { label: "Google WS Curriculum",       status: "blue",  detail: "Coordinate with Heather Summers + 4 external Google Partner trainers. Validate SOW includes Day-1 floor-walking, not just classroom instruction." },
+      { label: "Day-1 Survival Kit",         status: "blue",  detail: "1-page printable: MFA steps, Gmail login, iCare number, QR code. Will incorporate Login Cheat Sheet (3-password guide). Must work for both digital and non-digital field users." },
+    ],
+    readiness: [
+      { label: "Login Cheat Sheet (3-pwd)",  status: "blue",  detail: "3-password confusion guide: Legacy Laptop → Entra ID → Gmail. Will be incorporated into the Day-1 Survival Kit. Must be tested by non-IT users before print." },
+      { label: "War Room Bootcamp",          status: "blue",  detail: "2-hour training for 50 volunteer Champions. Covers MFA flow, Gmail login, iCare escalation path. No technical expertise required." },
+    ],
+    exec: [
+      { label: "Live Training at KoP + Sites", status: "green", detail: "Physical presence at King of Prussia confirmed. Matt + Emily + Sophia on-site. Google Partner trainers running virtual tracks simultaneously. TBD: Considering deploying trainers and Welcome Committees to several larger Clean Earth sites — decision pending site list validation and logistics." },
+    ],
+  },
+  identity: {
+    target:    [
+      { label: "CIA Cyber Capacity",          status: "amber", detail: "Validated 2/6 with Taylor Paich: Day-1 is Assessment, not Enforcement. Do NOT strip admin rights Day-1. 25% Cyber workload increase with zero new headcount — capacity risk actively monitored." },
+    ],
+    mobilize:  [
+      { label: "Provisioning Plan (2,500)",   status: "blue",  detail: "Define provisioning schedule for CE users into Veolia Okta/Entra ID. Priority: Day-1 critical roles first — Finance leads, Site Managers, IT staff." },
+      { label: "MFA Enrollment Strategy",     status: "blue",  detail: "Self-serve vs. IT pre-enroll decision. Manager Password Handover model as zero-IT-literacy fallback." },
+    ],
+    readiness: [
+      { label: "Merger Phishing Training",    status: "blue",  detail: "Mandatory pre-close module: M&A-specific phishing threats. Migrates to Riot platform from legacy Enviri tooling. Message: Hackers target mergers." },
+      { label: "Endpoint Agent Deploy",       status: "blue",  detail: "Install Veolia EDR agents on CE devices — Assessment only, no policy enforcement yet. Proactive comms about performance impact." },
+    ],
+    exec: [
+      { label: "Identity Embed in War Room",  status: "blue",  detail: "Cyber team member embedded in Command Center. If user cannot authenticate after cheat sheet + manager assist, direct line to Cyber — no ticket queue." },
+    ],
+  },
+  workplace: {
+    target:    [
+      { label: "🚨 Chromebook Procurement",  status: "red",   detail: "100 Chromebook bulk order in progress; 50 ring-fenced for KoP. BLOCKED: No validated site list prevents distribution planning." },
+      { label: "CIA Workplace Tab",           status: "amber", detail: "CE is full Microsoft 365. Google Shock confirmed 2/11. Users get @veolia.com email Day-1. Auto-forwarding from legacy addresses must be validated." },
+    ],
+    mobilize:  [
+      { label: "Mousepad Procurement",        status: "blue",  detail: "Printed mousepads with iCare number for every CE user. Connect Heather Summers with Megan Hunt (Marketing) for IMO/Rebrand budget. 30-day lead time." },
+      { label: "Self-Service Kiosk Design",   status: "blue",  detail: "TracyAnn designing kiosk solution for sites without physical training. Must integrate with Single Front Door URL." },
+    ],
+    readiness: [
+      { label: "Device Readiness Test",       status: "blue",  detail: "Validate Day-1 device experience end-to-end: Chromebook imaging, legacy laptop status, Intune enrollment for field devices." },
+    ],
+    exec: [
+      { label: "Fleet & Kiosks LIVE",         status: "green", detail: "Training fleet deployed at KoP and hub sites. Kiosk solution live for Tier 2/3 sites. All devices tested with Day-1 login flow." },
+    ],
+  },
+  apps: {
+    target:    [
+      { label: "⚠ Day-1 vs. TSA Scope",      status: "amber", detail: "Must confirm with Vamsi: SAP on Legal Day-1 (April) or TSA Exit (October)? If April, training window collapses to 8 weeks." },
+      { label: "App Owner Outreach",          status: "blue",  detail: "Emails sent to Vamsi (SAP), Cindy Solomon (Ariba), Stephanie Grubis (Workday), Brett/Karen (BlackLine), Jeff (Flextrack)." },
+    ],
+    mobilize:  [
+      { label: "Ariba/Concur Trainer Kickoff",status: "blue",  detail: "Trainer kickoff in progress. Confirm SOW covers CE-specific workflows, not just generic Veolia process training." },
+      { label: "Workday Ownership Confirm",   status: "amber", detail: "Awaiting written confirmation from Cecilia that HR owns Workday training end-to-end. Email sent. Deadline: EOW." },
+    ],
+    readiness: [
+      { label: "SAP Role Mapping (Day-2+)",   status: "gray",  detail: "Map CE finance/procurement roles to Veolia SAP T-Codes. Cannot train until complete. Prerequisite for Day-2+ training wave." },
+      { label: "Concur Mobile Guide",         status: "gray",  detail: "Self-service QRG for Concur mobile app setup. High-volume casual users — fully self-service format." },
+    ],
+    exec: [
+      { label: "Day-1 App Access Live",       status: "gray",  detail: "Confirm Concur, Ariba view-only, and any Day-1 corporate app access provisioned and tested before 8AM Day-1." },
+    ],
+  },
+  infra: {
+    target:    [
+      { label: "CIA Infra Tab (Elena)",        status: "blue",  detail: "Validate connectivity assumptions with Elena Navarette. Key: Will remote workers have a new VPN login on Day-1? Legacy apps must remain accessible during TSA." },
+    ],
+    mobilize:  [
+      { label: "⚠ Tech Liaison Appointment",  status: "amber", detail: "Suez lesson: dedicate an Infrastructure/Security liaison to partner with CE IT lead. OCM cannot own this — must come from technical leadership." },
+      { label: "Network Bridge Validation",    status: "blue",  detail: "Confirm CE-Veolia network connectivity. FoxPro/4D legacy apps must remain accessible during TSA. Validate VPN config for remote CE employees." },
+    ],
+    readiness: [
+      { label: "Remote Access Testing",        status: "blue",  detail: "End-to-end test: CE user, legacy laptop, new Veolia VPN. Must work before Day-1. Identify sites requiring manual intervention." },
+    ],
+    exec: [
+      { label: "Network Bridge LIVE",          status: "green", detail: "CE-Veolia bridge active. Legacy applications accessible via new Veolia credentials. Remote access confirmed for all Tier 1 Heat Zone sites." },
+    ],
+  },
+  support: {
+    target:    [
+      { label: "🚨 Validated Site List",       status: "red",   detail: "CRITICAL BLOCKER: No validated site list with headcounts. Blocks mousepad ordering, Welcome Committee targeting, Heat Zone tiering, War Room routing. Must come from Deloitte/Marine." },
+      { label: "Ed Cacho Meeting (iCare)",     status: "amber", detail: "Define: persistent Google Meet bridge structure, IVR dedicated CE queue, and rapid pulse reporting every 2 hrs. iCare is -40% staffed." },
+    ],
+    mobilize:  [
+      { label: "Recruit Volunteer Army (50)",  status: "blue",  detail: "Recruit Google Champions/Power Users to staff Day-1 Virtual Bridge. Request list from Heather Summers. 2-hour Bootcamp required before Day-1." },
+      { label: "Single Front Door Portal",     status: "blue",  detail: "Stand up dedicated URL: MFA Setup, Gmail Access, Get Help, FAQ. Must be accessible without VPN before Welcome Kit printing." },
+    ],
+    readiness: [
+      { label: "IVR Configuration",            status: "blue",  detail: "Configure iCare IVR: dedicated Clean Earth Day-1 option. Agent scripts written and tested on MVEE Survival Kit scenarios only." },
+      { label: "Heat Zone Tiering (88 sites)", status: "blue",  detail: "T1 (>50 staff): Welcome Committee. T2 (10-50): Manager Box. T3 (<10): Digital + wallet cards. Routing logic fed to iCare and Emily/Sofie." },
+    ],
+    exec: [
+      { label: "⚡ Command Center 48hr Live",   status: "amber", detail: "Persistent Google Meet bridge, 48 continuous hours. 50 volunteers + Cyber embed + OCM Lead. Escalation: L0 portal → L1 Bridge → L2 iCare → L3 Workstream Lead. Pulse reports every 2 hrs." },
+    ],
+  },
+  hr: {
+    target:    [
+      { label: "Workday Ownership Pending",    status: "amber", detail: "Email sent to Cecilia: HR owns Workday content, logistics, and delivery. Awaiting written confirmation. Deadline: EOW or DB&T budget includes placeholder." },
+      { label: "Critical Talent Retention",    status: "blue",  detail: "FoxPro/4D SMEs are flight risks. OCM feeds specific IT names from due diligence to Cecilia retention list. 35 offshore GSC resources also at risk." },
+    ],
+    mobilize:  [
+      { label: "Day-1 Org Chart Lock",         status: "blue",  detail: "Cecilia owns the Day-1 TOM. Confirm: Lift & Shift vs. Integration. OCM needs this locked to build the Change Story and assign LMS training roles." },
+      { label: "Welcome Packet (HR + IT)",     status: "blue",  detail: "OCM requests insertion of Day-1 Digital Essentials 1-pager into HR Welcome Packet — IT credentials arrive in the same hand as HR welcome materials." },
+    ],
+    readiness: [
+      { label: "Manager Script Delivery",      status: "blue",  detail: "HR + OCM co-deliver This is Permanent script to site managers 1 week before close. HR owns employment narrative; OCM owns tools/work narrative." },
+    ],
+    exec: [
+      { label: "HR Support Active",            status: "green", detail: "Bill Agostini + Lauren deployed in parallel with IT Command Center. Handle employment/benefits questions so iCare is not flooded with HR issues." },
+    ],
+  },
+};
+
+const TASKS_TSA = {
+  ocm: {
+    stabilize: [{ label: "Hypercare Dashboard",      status: "amber", detail: "Live readiness dashboard: ticket volume, adoption %, open RAID items, War Room utilization. Updated daily during Hypercare." }],
+    enable:    [{ label: "TSA Exit Change Story",     status: "blue",  detail: "Narrative: why SAP/Workday adoption matters for TSA Exit. Shared with Finance, HR, and Procurement leads." },
+                { label: "Culture Integration Pulse", status: "blue",  detail: "5-question pulse survey at Month 2. Gauge CE employee sentiment and flag emerging resistance patterns." }],
+    migrate:   [{ label: "Cutover Comms Package",     status: "blue",  detail: "What changes, when, who to call. Distributed 2 weeks before SAP/Workday cutover freeze." }],
+    exit:      [{ label: "BAU Handoff + Close-Out",   status: "green", detail: "OCM formally hands off to operational management. Lessons learned documented. RAID log closed. SteerCo sign-off received." }],
+  },
+  training: {
+    stabilize: [{ label: "Google WS Phase 2",           status: "amber", detail: "Advanced Google Workspace: Drive collaboration, Meet, Calendar sharing. Builds on Day-1 survival training." },
+                { label: "Competency Baseline Survey",   status: "blue",  detail: "Measure post-Day-1 proficiency by user segment. Feeds SAP/Ariba training prioritization." }],
+    enable:    [{ label: "SAP Power User Bootcamp",      status: "blue",  detail: "Role-based SAP training (GL, AP, AR, Treasury). Requires sandbox populated with CE data and role mapping complete." },
+                { label: "Ariba Train-the-Trainer",      status: "blue",  detail: "Train Veolia Procurement leads to cascade to 500+ CE requisitioners. QRG-supported self-service backup." },
+                { label: "Concur Self-Service Rollout",  status: "blue",  detail: "Mobile app guide + policy context to all traveling employees. Self-service format for high-volume casual users." }],
+    migrate:   [{ label: "Month-End Close Simulation",   status: "amber", detail: "Critical risk: first month-end close in SAP must not fail. Run full simulation with CE Finance against sandbox before go-live." }],
+    exit:      [{ label: "Time-to-Competency Validated", status: "green", detail: "Confirm CE Finance/Procurement users can independently transact in SAP/Ariba/Concur. Go/No-Go data point for TSA Exit." }],
+  },
+  identity: {
+    stabilize: [{ label: "Admin Rights Assessment Wv1",   status: "amber", detail: "Structured review of CE IT admin rights. Assess → document → plan remediation. No enforcement yet." }],
+    enable:    [{ label: "Privileged Access Remediation",  status: "blue",  detail: "Apply Veolia PAM standards to CE IT staff. Just-in-Time access model. Change messaging required to prevent attrition." },
+                { label: "Admin Rights Change Messaging",  status: "blue",  detail: "OCM-drafted narrative: why access controls are changing, what CE IT staff keep vs. lose, how to request elevated access going forward." }],
+    migrate:   [{ label: "Veolia Cyber Standards Full",    status: "blue",  detail: "CE fully aligned to Veolia Global Cyber Standards. Compliance reporting cadence established." }],
+    exit:      [{ label: "Full IAM Compliance ✓",          status: "green", detail: "All CE users and IT staff operating within Veolia identity governance. Legacy Enviri tooling fully decommissioned." }],
+  },
+  workplace: {
+    stabilize: [{ label: "Microsoft Decommission Plan",  status: "amber", detail: "Define timeline for O365 license wind-down. Dependency: all users verified operational in Google Workspace first." }],
+    enable:    [{ label: "O365 License Wind-Down",        status: "blue",  detail: "Staged removal of Microsoft 365 licenses as Google adoption is confirmed by user segment." },
+                { label: "Advanced Google WS Features",   status: "blue",  detail: "Drive sharing governance, Shared Drives, Meet recording policies. Builds digital culture on Veolia platform." }],
+    migrate:   [{ label: "Legacy Device Refresh",         status: "blue",  detail: "Replace remaining CE legacy devices with Veolia-standard endpoints. Priority: Finance and IT staff on critical path." }],
+    exit:      [{ label: "Full Google WS Adoption ✓",     status: "green", detail: "Microsoft O365 fully decommissioned. All CE users operating on Veolia Google Workspace stack." }],
+  },
+  apps: {
+    stabilize: [{ label: "SAP Data Migration Prep",    status: "blue",  detail: "CE legacy financial data mapped and validated for SAP migration. Legacy system read-only access maintained during migration." },
+                { label: "Workday Go-Live (tHRive)",   status: "blue",  detail: "HR-led Workday go-live with CE population. tHRive materials must be adapted for CE data mapping: job codes, org structure." }],
+    enable:    [{ label: "SAP Power User Training",    status: "blue",  detail: "Role-based SAP training by module. Requires role mapping complete and sandbox populated with CE data." },
+                { label: "Ariba + BlackLine Adoption", status: "blue",  detail: "Procurement and Finance compliance tools fully adopted. BlackLine controllers trained on GL reconciliation workflow." }],
+    migrate:   [{ label: "⚠ Month-End Close in SAP",  status: "amber", detail: "First month-end close is the highest-risk SAP milestone. Pre-simulation required. Claude Scher flagged as critical failure point." },
+                { label: "Cutover Freeze Comms",       status: "blue",  detail: "Communicate blackout period: when CE stops using legacy system and days-before-go-live." }],
+    exit:      [{ label: "SAP Go-Live + TSA Exit ✓",  status: "green", detail: "CE Finance and Procurement fully transacting in SAP S/4HANA. TSA financial systems dependency closed." }],
+  },
+  infra: {
+    stabilize: [{ label: "Legacy System Inventory",      status: "blue",  detail: "Full inventory of FoxPro/4D systems: who uses them, what they do, and what they replace in the Veolia stack." }],
+    enable:    [{ label: "FoxPro/4D Knowledge Transfer",  status: "blue",  detail: "Structured KT sessions with CE legacy SMEs before role transitions. Documentation of tribal knowledge critical to TSA continuity." },
+                { label: "Azure/AWS Architecture Align",  status: "blue",  detail: "Backend infrastructure alignment with Len De La Cruz. Prerequisite for decommissioning legacy CE hosting." }],
+    migrate:   [{ label: "Legacy Decommission Planning",  status: "blue",  detail: "Define sunset timeline for CE legacy infrastructure once replacement systems are validated and in production." }],
+    exit:      [{ label: "Infra on Veolia Stack ✓",       status: "green", detail: "All CE infrastructure migrated to Veolia standard environments. Legacy CE hosting fully decommissioned." }],
+  },
+  support: {
+    stabilize: [{ label: "Hypercare Period (30 days)",      status: "amber", detail: "Extended support posture: War Room scales from 48hr to business hours. Ticket volume monitored daily. FAQ updated as new issues emerge." }],
+    enable:    [{ label: "Transition to Standard iCare",    status: "blue",  detail: "CE users fully routed to standard iCare processes. Dedicated IVR prompt retired as integration stabilizes." },
+                { label: "Ticket Trend Analysis",           status: "blue",  detail: "OCM reviews ticket categories to identify persistent training gaps. Feeds targeted remediation in Enable phase." }],
+    migrate:   [{ label: "FAQ Portal TSA Phase Update",     status: "blue",  detail: "Single Front Door updated with TSA-phase content: SAP/Ariba guides, Workday self-service, cutover FAQs." }],
+    exit:      [{ label: "CE Support Fully BAU ✓",          status: "green", detail: "CE employees indistinguishable from Veolia BAU users in iCare. Integration-specific queue retired." }],
+  },
+  hr: {
+    stabilize: [{ label: "Post-D1 Org Comms",           status: "blue",  detail: "HR communicates org structure changes post-close. OCM aligns timing so IT change comms do not collide with employment announcements." }],
+    enable:    [{ label: "Role Harmonization",           status: "blue",  detail: "CE job titles and grades mapped to Veolia equivalents. Impacts LMS role assignments and SAP security role mapping." },
+                { label: "Culture Integration Survey",   status: "blue",  detail: "Month 3 pulse: belonging, clarity of expectations, confidence in tools. Results feed Month 4 OCM focus areas." }],
+    migrate:   [{ label: "Performance Cycle Alignment", status: "blue",  detail: "CE employees onboarded to Veolia performance management cycle in Workday. First review cycle completed under new structure." }],
+    exit:      [{ label: "HR Processes on Workday ✓",  status: "green", detail: "All CE HR processes fully operational in Workday. ADP/TalentHub fully decommissioned. BAU handoff complete." }],
+  },
+};
+
+function App() {
+  const [view, setView] = useState("d1");
+  const [selected, setSelected] = useState(null);
+  const [focusLane, setFocusLane] = useState(null);
+
+  const phases = view === "d1" ? PHASES_D1 : PHASES_TSA;
+  const tasks  = view === "d1" ? TASKS_D1   : TASKS_TSA;
+
+  const criticalCount = LANES.reduce((acc, lane) =>
+    acc + Object.values(tasks[lane.id] || {}).flat().filter(t => t.status === "red").length, 0);
+
+  return (
+    <div style={{ fontFamily: "'Segoe UI',system-ui,sans-serif", background: "#0d1117", minHeight: "100vh", color: "#e2e8f0" }}>
+
+      {/* Header */}
+      <div style={{
+        position: "sticky", top: 0, zIndex: 100,
+        background: "#0d1117", borderBottom: "1px solid #1e2a3a",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "0 24px", height: 60,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{
+            width: 34, height: 34, borderRadius: 8,
+            background: "linear-gradient(135deg,#7c3aed,#2563eb)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 12, fontWeight: 700, color: "white",
+          }}>PL</div>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700 }}>Project Liberty — Readiness Map</div>
+            <div style={{ fontSize: 11, color: "#64748b" }}>Veolia / Clean Earth · DB&T OCM · v2.17.26</div>
+          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {criticalCount > 0 && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: 6,
+              background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.25)",
+              borderRadius: 6, padding: "4px 10px", fontSize: 11, color: "#fca5a5",
+            }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#ef4444", display: "inline-block" }} />
+              {criticalCount} Critical Blockers
+            </div>
+          )}
+          <div style={{ display: "flex", background: "#111827", borderRadius: 8, padding: 3, gap: 2 }}>
+            {[{ id:"d1", label:"Day-1 Readiness" }, { id:"tsa", label:"TSA Exit Plan" }].map(t => (
+              <button key={t.id} onClick={() => { setView(t.id); setSelected(null); setFocusLane(null); }} style={{
+                padding: "5px 14px", borderRadius: 6, border: "none", cursor: "pointer",
+                fontSize: 12, fontWeight: 600, fontFamily: "inherit",
+                background: view === t.id ? "#1e293b" : "transparent",
+                color: view === t.id ? "#e2e8f0" : "#64748b", transition: "all 0.15s",
+              }}>{t.label}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", alignItems: "flex-start" }}>
+
+        {/* Sidebar */}
+        <div style={{
+          width: 188, flexShrink: 0, background: "#0f1623",
+          borderRight: "1px solid #1e2a3a", padding: "18px 0",
+          position: "sticky", top: 60,
+          height: "calc(100vh - 60px)", overflowY: "auto",
+        }}>
+          <div style={{ padding: "0 14px 14px" }}>
+            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#64748b", marginBottom: 8 }}>Swimlanes</div>
+            {LANES.map(lane => (
+              <div key={lane.id} onClick={() => setFocusLane(focusLane === lane.id ? null : lane.id)} style={{
+                display: "flex", alignItems: "center", gap: 8, padding: "5px 8px",
+                borderRadius: 5, cursor: "pointer", marginBottom: 2,
+                background: focusLane === lane.id ? "rgba(255,255,255,0.05)" : "transparent",
+                opacity: focusLane && focusLane !== lane.id ? 0.25 : 1,
+                transition: "all 0.15s",
+              }}>
+                <div style={{ width: 8, height: 8, borderRadius: 2, background: lane.accent, flexShrink: 0 }} />
+                <span style={{ fontSize: 12, color: "#94a3b8" }}>{lane.label}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ height: 1, background: "#1e2a3a", margin: "4px 14px 14px" }} />
+          <div style={{ padding: "0 14px 14px" }}>
+            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#64748b", marginBottom: 8 }}>Status</div>
+            {Object.entries(STATUS).map(([k, v]) => (
+              <div key={k} style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
+                <div style={{ width: 8, height: 8, borderRadius: 2, background: v.bg, border: `1px solid ${v.border}`, flexShrink: 0 }} />
+                <span style={{ fontSize: 12, color: "#94a3b8" }}>{v.label}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ height: 1, background: "#1e2a3a", margin: "4px 14px 14px" }} />
+          <div style={{ padding: "0 14px" }}>
+            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#64748b", marginBottom: 8 }}>Key Dates</div>
+            {(view === "d1" ? [
+              { code:"NOW", val:"Feb 17, 2026", c:"#60a5fa" },
+              { code:"MOB", val:"Mar 1–31",     c:"#a78bfa" },
+              { code:"RDY", val:"Apr 1–30",     c:"#fbbf24" },
+            { code:"D-1", val:"May 1, 2026", c:"#f87171" },
+            ] : [
+              { code:"Mo1", val:"Post-close stabilize", c:"#34d399" },
+              { code:"Mo2", val:"Core enablement",      c:"#10b981" },
+              { code:"Mo4", val:"Migration prep",       c:"#059669" },
+              { code:"Mo6", val:"TSA Exit ✓",           c:"#6ee7b7" },
+            ]).map(d => (
+              <div key={d.code} style={{ display: "flex", gap: 8, alignItems: "baseline", marginBottom: 6 }}>
+                <span style={{ fontSize: 11, fontFamily: "monospace", fontWeight: 700, color: d.c, minWidth: 28 }}>{d.code}</span>
+                <span style={{ fontSize: 12, color: "#94a3b8" }}>{d.val}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Grid */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ minWidth: 800 }}>
+            {/* Phase header */}
+            <div style={{
+              display: "grid", gridTemplateColumns: `168px repeat(${phases.length}, 1fr)`,
+              borderBottom: "1px solid #1e2a3a",
+              background: "#0d1117", position: "sticky", top: 59, zIndex: 50,
+            }}>
+              <div style={{ borderRight: "1px solid #1e2a3a" }} />
+              {phases.map((p, i) => (
+                <div key={p.id} style={{
+                  padding: "10px 14px",
+                  borderRight: i < phases.length - 1 ? "1px solid #1e2a3a" : "none",
+                  borderTop: `2px solid ${p.accent}`,
+                }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: p.accent }}>{p.label}</div>
+                  <div style={{ fontSize: 11, color: "#475569", marginTop: 2, fontFamily: "monospace" }}>{p.dates}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Rows */}
+            {LANES.map(lane => (
+              <div key={lane.id} style={{
+                display: "grid", gridTemplateColumns: `168px repeat(${phases.length}, 1fr)`,
+                borderBottom: "1px solid #1e2a3a",
+                opacity: !focusLane || focusLane === lane.id ? 1 : 0.12,
+                transition: "opacity 0.2s",
+              }}>
+                <div onClick={() => setFocusLane(focusLane === lane.id ? null : lane.id)} style={{
+                  display: "flex", alignItems: "flex-start", gap: 8, padding: "14px 12px",
+                  borderRight: "1px solid #1e2a3a", cursor: "pointer",
+                  background: "#0f1623", position: "sticky", left: 0, zIndex: 10,
+                }}>
+                  <div style={{ width: 3, height: 28, borderRadius: 2, background: lane.accent, flexShrink: 0, marginTop: 2 }} />
+                  <div style={{ fontSize: 13, fontWeight: 700, color: lane.accent, lineHeight: 1.4 }}>{lane.label}</div>
+                </div>
+                {phases.map((p, pi) => {
+                  const cellTasks = tasks[lane.id]?.[p.id] || [];
+                  return (
+                    <div key={p.id} style={{
+                      padding: "9px 9px", minHeight: 76,
+                      borderRight: pi < phases.length - 1 ? "1px solid #1e2a3a" : "none",
+                      display: "flex", flexDirection: "column", gap: 4,
+                    }}>
+                      {cellTasks.map((task, ti) => {
+                        const s = STATUS[task.status];
+                        const isSel = selected && selected.lane === lane.id && selected.phase === p.id && selected.idx === ti;
+                        return (
+                          <div key={ti}
+                            onClick={() => setSelected(isSel ? null : { lane: lane.id, phase: p.id, idx: ti, task })}
+                            style={{
+                              background: isSel ? s.bg : "rgba(255,255,255,0.03)",
+                              border: `1px solid ${isSel ? s.border : "#1e2a3a"}`,
+                              borderRadius: 5, padding: "5px 9px",
+                              fontSize: 12, color: isSel ? s.text : "#94a3b8",
+                              cursor: "pointer", transition: "all 0.12s", lineHeight: 1.4,
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = s.bg; e.currentTarget.style.borderColor = s.border; e.currentTarget.style.color = s.text; }}
+                            onMouseLeave={e => { if (!isSel) { e.currentTarget.style.background = "rgba(255,255,255,0.03)"; e.currentTarget.style.borderColor = "#1e2a3a"; e.currentTarget.style.color = "#94a3b8"; } }}
+                          >{task.label}</div>
+                        );
+                      })}
+                      {cellTasks.length === 0 && <div style={{ fontSize: 10, color: "#1e293b", paddingTop: 4 }}>—</div>}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Detail drawer */}
+      {selected && (
+        <div style={{
+          position: "fixed", bottom: 0, left: 188, right: 0, zIndex: 200,
+          background: "#111827", borderTop: "1px solid #1e2a3a",
+          padding: "14px 28px", display: "flex", alignItems: "flex-start", gap: 20,
+          boxShadow: "0 -8px 32px rgba(0,0,0,0.5)",
+        }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 5 }}>
+              <div style={{
+                fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 4, textTransform: "uppercase", letterSpacing: "0.07em",
+                background: STATUS[selected.task.status].bg, border: `1px solid ${STATUS[selected.task.status].border}`, color: STATUS[selected.task.status].text,
+              }}>{STATUS[selected.task.status].label}</div>
+              <div style={{ fontSize: 16, fontWeight: 700 }}>{selected.task.label}</div>
+            </div>
+            <div style={{ fontSize: 13, color: "#64748b", lineHeight: 1.7 }}>{selected.task.detail}</div>
+          </div>
+          <button onClick={() => setSelected(null)} style={{
+            background: "#1e293b", border: "1px solid #334155", borderRadius: 6,
+            color: "#64748b", fontSize: 11, padding: "5px 12px", cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
+          }}>Close ✕</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
