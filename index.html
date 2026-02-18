@@ -369,18 +369,6 @@ function App() {
               {criticalCount} Critical Blockers
             </div>
           )}
-          <div style={{ display: "flex", background: T.bgSidebar, borderRadius: 8, padding: 3, gap: 2, border: `1px solid ${T.border}` }}>
-            {[{ id:"d1", label:"Day-1 Readiness" }, { id:"tsa", label:"TSA Exit Plan" }].map(t => (
-              <button key={t.id} onClick={() => { setView(t.id); setSelected(null); setFocusLane(null); playClick(); }} style={{
-                padding: "5px 14px", borderRadius: 6, border: "none", cursor: "pointer",
-                fontSize: 12, fontWeight: 600, fontFamily: "inherit",
-                background: view === t.id ? "#ffffff" : "transparent",
-                color: view === t.id ? T.text : T.textMuted,
-                boxShadow: view === t.id ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
-                transition: "all 0.15s",
-              }}>{t.label}</button>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -394,7 +382,20 @@ function App() {
           height: "calc(100vh - 60px)", overflowY: "auto",
         }}>
           <div style={{ padding: "0 14px 14px" }}>
-            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: T.textMuted, marginBottom: 8 }}>Swimlanes</div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: T.textMuted }}>Swimlanes</div>
+              {focusLane && (
+                <div onClick={() => { setFocusLane(null); playClick(); }}
+                  onMouseEnter={() => playHover()}
+                  style={{
+                    fontSize: 10, fontWeight: 600, color: "#2563eb", cursor: "pointer",
+                    background: "rgba(37,99,235,0.08)", border: "1px solid rgba(37,99,235,0.2)",
+                    borderRadius: 4, padding: "2px 7px", transition: "all 0.15s",
+                  }}>
+                  Show All ✕
+                </div>
+              )}
+            </div>
             {LANES.map(lane => (
               <div key={lane.id} onClick={() => { setFocusLane(focusLane === lane.id ? null : lane.id); playClick(); }}
                 onMouseEnter={() => playHover()}
@@ -406,7 +407,7 @@ function App() {
                   transition: "all 0.15s",
                 }}>
                 <div style={{ width: 8, height: 8, borderRadius: 2, background: lane.accent, flexShrink: 0 }} />
-                <span style={{ fontSize: 12, color: T.text }}>{lane.label}</span>
+                <span style={{ fontSize: 12, color: T.text, fontWeight: focusLane === lane.id ? 700 : 400 }}>{lane.label}</span>
               </div>
             ))}
           </div>
@@ -444,13 +445,46 @@ function App() {
 
         {/* ── Grid ── */}
         <div style={{ flex: 1, minWidth: 0 }}>
+
+          {/* View Toggle Banner */}
+          <div style={{
+            position: "sticky", top: 59, zIndex: 51,
+            background: "#ffffff", borderBottom: `1px solid ${T.border}`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: "10px 24px",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+          }}>
+            <div style={{ fontSize: 12, color: T.textMuted, fontWeight: 500, marginRight: 16 }}>Viewing:</div>
+            <div style={{ display: "flex", background: T.bgSidebar, borderRadius: 10, padding: 4, gap: 3, border: `1px solid ${T.border}` }}>
+              {[
+                { id:"d1",  label:"⚡ Day-1 Readiness", sublabel:"Now → May 1, 2026",   activeColor: "#2563eb" },
+                { id:"tsa", label:"📋 TSA Exit Plan",    sublabel:"May → October 2026",  activeColor: "#047857" },
+              ].map(t => (
+                <button key={t.id}
+                  onClick={() => { setView(t.id); setSelected(null); setFocusLane(null); playClick(); }}
+                  onMouseEnter={() => playHover()}
+                  style={{
+                    padding: "8px 32px", borderRadius: 7, border: "none", cursor: "pointer",
+                    fontFamily: "inherit", textAlign: "center",
+                    background: view === t.id ? "#ffffff" : "transparent",
+                    boxShadow: view === t.id ? "0 1px 6px rgba(0,0,0,0.1)" : "none",
+                    borderBottom: view === t.id ? `3px solid ${t.activeColor}` : "3px solid transparent",
+                    transition: "all 0.15s",
+                  }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: view === t.id ? t.activeColor : T.textMuted }}>{t.label}</div>
+                  <div style={{ fontSize: 10, color: view === t.id ? T.textMuted : T.textFaint, marginTop: 1 }}>{t.sublabel}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div style={{ minWidth: 800 }}>
 
             {/* Phase header */}
             <div style={{
               display: "grid", gridTemplateColumns: `168px repeat(${phases.length}, 1fr)`,
               borderBottom: `1px solid ${T.border}`,
-              background: T.bgPhaseHdr, position: "sticky", top: 59, zIndex: 50,
+              background: T.bgPhaseHdr, position: "sticky", top: 112, zIndex: 50,
               boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
             }}>
               <div style={{ borderRight: `1px solid ${T.border}` }} />
@@ -538,6 +572,7 @@ function App() {
                 })}
               </div>
             ))}
+          </div>
           </div>
         </div>
       </div>
