@@ -7,11 +7,11 @@
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-padding-top: 120px; }
-body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0d1117; color: #e2e8f0; min-height: 100vh; overflow-x: auto; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f8fafc; color: #1e293b; min-height: 100vh; overflow-x: auto; }
 button { font-family: inherit; }
 ::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: #0d1117; }
-::-webkit-scrollbar-thumb { background: #1e2a3a; border-radius: 3px; }
+::-webkit-scrollbar-track { background: #f1f5f9; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 </style>
 </head>
 <body>
@@ -20,39 +20,92 @@ button { font-family: inherit; }
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
 <script type="text/babel">
-const { useState } = React;
+const { useState, useRef, useCallback } = React;
 
+// ── Audio ─────────────────────────────────────────────────────────────────────
+function useAudio() {
+  const ctxRef = useRef(null);
+
+  const getCtx = useCallback(() => {
+    if (!ctxRef.current) {
+      ctxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    // Resume if suspended (browser autoplay policy)
+    if (ctxRef.current.state === 'suspended') ctxRef.current.resume();
+    return ctxRef.current;
+  }, []);
+
+  const playHover = useCallback(() => {
+    try {
+      const ctx = getCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1040, ctx.currentTime + 0.06);
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.04, ctx.currentTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.09);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.09);
+    } catch(e) {}
+  }, [getCtx]);
+
+  const playClick = useCallback(() => {
+    try {
+      const ctx = getCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(520, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(320, ctx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.07, ctx.currentTime + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.14);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.14);
+    } catch(e) {}
+  }, [getCtx]);
+
+  return { playHover, playClick };
+}
+
+// ── Data ──────────────────────────────────────────────────────────────────────
 const PHASES_D1 = [
-  { id: "target",    label: "Targeting",    dates: "Now → Feb 28",   accent: "#60a5fa" },
-  { id: "mobilize",  label: "Mobilization", dates: "Mar 1 → Mar 31", accent: "#a78bfa" },
-  { id: "readiness", label: "Readiness",    dates: "Apr 1 → Apr 30", accent: "#fbbf24" },
-  { id: "exec",      label: "⚡ Day-1",      dates: "~May 1 + 72hrs", accent: "#f87171" },
+  { id: "target",    label: "Targeting",    dates: "Now → Feb 28",   accent: "#2563eb" },
+  { id: "mobilize",  label: "Mobilization", dates: "Mar 1 → Mar 31", accent: "#7c3aed" },
+  { id: "readiness", label: "Readiness",    dates: "Apr 1 → Apr 30", accent: "#d97706" },
+  { id: "exec",      label: "⚡ Day-1",      dates: "May 1 + 72hrs",  accent: "#dc2626" },
 ];
 
 const PHASES_TSA = [
-  { id: "stabilize", label: "Stabilize",  dates: "D-1 → Month 2", accent: "#34d399" },
-  { id: "enable",    label: "Enable",     dates: "Month 2 → 4",   accent: "#10b981" },
-  { id: "migrate",   label: "Migrate",    dates: "Month 4 → 6",   accent: "#059669" },
-  { id: "exit",      label: "✓ TSA Exit", dates: "~Month 6",      accent: "#6ee7b7" },
+  { id: "stabilize", label: "Stabilize",  dates: "D-1 → Month 2", accent: "#059669" },
+  { id: "enable",    label: "Enable",     dates: "Month 2 → 4",   accent: "#0891b2" },
+  { id: "migrate",   label: "Migrate",    dates: "Month 4 → 6",   accent: "#0369a1" },
+  { id: "exit",      label: "✓ TSA Exit", dates: "~Month 6",      accent: "#047857" },
 ];
 
 const STATUS = {
-  red:   { bg: "rgba(239,68,68,0.12)",   text: "#fca5a5", border: "rgba(239,68,68,0.3)",   label: "Critical" },
-  amber: { bg: "rgba(251,191,36,0.10)",  text: "#fcd34d", border: "rgba(251,191,36,0.3)",  label: "At Risk"  },
-  green: { bg: "rgba(52,211,153,0.10)",  text: "#6ee7b7", border: "rgba(52,211,153,0.3)",  label: "On Track" },
-  blue:  { bg: "rgba(96,165,250,0.10)",  text: "#93c5fd", border: "rgba(96,165,250,0.25)", label: "Planned"  },
-  gray:  { bg: "rgba(107,114,128,0.10)", text: "#9ca3af", border: "rgba(107,114,128,0.2)", label: "Deferred" },
+  red:   { bg: "rgba(220,38,38,0.08)",   text: "#dc2626", border: "rgba(220,38,38,0.3)",   label: "Critical" },
+  amber: { bg: "rgba(217,119,6,0.08)",   text: "#b45309", border: "rgba(217,119,6,0.3)",   label: "At Risk"  },
+  green: { bg: "rgba(5,150,105,0.08)",   text: "#047857", border: "rgba(5,150,105,0.3)",   label: "On Track" },
+  blue:  { bg: "rgba(37,99,235,0.07)",   text: "#1d4ed8", border: "rgba(37,99,235,0.25)",  label: "Planned"  },
+  gray:  { bg: "rgba(100,116,139,0.07)", text: "#64748b", border: "rgba(100,116,139,0.2)", label: "Deferred" },
 };
 
 const LANES = [
-  { id: "ocm",       label: "OCM / Comms",           accent: "#8b5cf6" },
-  { id: "training",  label: "Training & Enablement",  accent: "#0ea5e9" },
-  { id: "identity",  label: "Identity & Access",      accent: "#ef4444" },
-  { id: "workplace", label: "Workplace / Google",     accent: "#f59e0b" },
-  { id: "apps",      label: "Corporate Apps",         accent: "#10b981" },
-  { id: "infra",     label: "Infrastructure",         accent: "#6366f1" },
-  { id: "support",   label: "Support (iCare)",        accent: "#ec4899" },
-  { id: "hr",        label: "HR / People & Org",      accent: "#f97316" },
+  { id: "ocm",       label: "OCM / Comms",           accent: "#7c3aed" },
+  { id: "training",  label: "Training & Enablement",  accent: "#0891b2" },
+  { id: "identity",  label: "Identity & Access",      accent: "#dc2626" },
+  { id: "workplace", label: "Workplace / Google",     accent: "#d97706" },
+  { id: "apps",      label: "Corporate Apps",         accent: "#059669" },
+  { id: "infra",     label: "Infrastructure",         accent: "#4f46e5" },
+  { id: "support",   label: "Support (iCare)",        accent: "#db2777" },
+  { id: "hr",        label: "HR / People & Org",      accent: "#ea580c" },
 ];
 
 const TASKS_D1 = {
@@ -253,10 +306,12 @@ const TASKS_TSA = {
   },
 };
 
+// ── Component ─────────────────────────────────────────────────────────────────
 function App() {
   const [view, setView] = useState("d1");
   const [selected, setSelected] = useState(null);
   const [focusLane, setFocusLane] = useState(null);
+  const { playHover, playClick } = useAudio();
 
   const phases = view === "d1" ? PHASES_D1 : PHASES_TSA;
   const tasks  = view === "d1" ? TASKS_D1   : TASKS_TSA;
@@ -264,13 +319,30 @@ function App() {
   const criticalCount = LANES.reduce((acc, lane) =>
     acc + Object.values(tasks[lane.id] || {}).flat().filter(t => t.status === "red").length, 0);
 
-  return (
-    <div style={{ fontFamily: "'Segoe UI',system-ui,sans-serif", background: "#0d1117", minHeight: "100vh", color: "#e2e8f0" }}>
+  // Light theme tokens
+  const T = {
+    bg:          "#f8fafc",
+    bgSidebar:   "#f1f5f9",
+    bgHeader:    "#ffffff",
+    bgGrid:      "#ffffff",
+    bgPhaseHdr:  "#ffffff",
+    border:      "#e2e8f0",
+    borderMid:   "#cbd5e1",
+    text:        "#1e293b",
+    textMuted:   "#64748b",
+    textFaint:   "#94a3b8",
+    rowAlt:      "#f8fafc",
+    laneLabel:   "#f1f5f9",
+  };
 
-      {/* Header */}
+  return (
+    <div style={{ fontFamily: "'Segoe UI',system-ui,sans-serif", background: T.bg, minHeight: "100vh", color: T.text }}>
+
+      {/* ── Header ── */}
       <div style={{
         position: "sticky", top: 0, zIndex: 100,
-        background: "#0d1117", borderBottom: "1px solid #1e2a3a",
+        background: T.bgHeader, borderBottom: `1px solid ${T.border}`,
+        boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "0 24px", height: 60,
       }}>
@@ -282,28 +354,30 @@ function App() {
             fontSize: 12, fontWeight: 700, color: "white",
           }}>PL</div>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 700 }}>Project Liberty — Readiness Map</div>
-            <div style={{ fontSize: 11, color: "#64748b" }}>Veolia / Clean Earth · DB&T OCM · v2.17.26</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>Project Liberty — Readiness Map</div>
+            <div style={{ fontSize: 11, color: T.textMuted }}>Veolia / Clean Earth · DB&T OCM · v2.18.26</div>
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           {criticalCount > 0 && (
             <div style={{
               display: "flex", alignItems: "center", gap: 6,
-              background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.25)",
-              borderRadius: 6, padding: "4px 10px", fontSize: 11, color: "#fca5a5",
+              background: "rgba(220,38,38,0.07)", border: "1px solid rgba(220,38,38,0.2)",
+              borderRadius: 6, padding: "4px 10px", fontSize: 11, color: "#dc2626",
             }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#ef4444", display: "inline-block" }} />
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#dc2626", display: "inline-block" }} />
               {criticalCount} Critical Blockers
             </div>
           )}
-          <div style={{ display: "flex", background: "#111827", borderRadius: 8, padding: 3, gap: 2 }}>
+          <div style={{ display: "flex", background: T.bgSidebar, borderRadius: 8, padding: 3, gap: 2, border: `1px solid ${T.border}` }}>
             {[{ id:"d1", label:"Day-1 Readiness" }, { id:"tsa", label:"TSA Exit Plan" }].map(t => (
-              <button key={t.id} onClick={() => { setView(t.id); setSelected(null); setFocusLane(null); }} style={{
+              <button key={t.id} onClick={() => { setView(t.id); setSelected(null); setFocusLane(null); playClick(); }} style={{
                 padding: "5px 14px", borderRadius: 6, border: "none", cursor: "pointer",
                 fontSize: 12, fontWeight: 600, fontFamily: "inherit",
-                background: view === t.id ? "#1e293b" : "transparent",
-                color: view === t.id ? "#e2e8f0" : "#64748b", transition: "all 0.15s",
+                background: view === t.id ? "#ffffff" : "transparent",
+                color: view === t.id ? T.text : T.textMuted,
+                boxShadow: view === t.id ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                transition: "all 0.15s",
               }}>{t.label}</button>
             ))}
           </div>
@@ -312,125 +386,153 @@ function App() {
 
       <div style={{ display: "flex", alignItems: "flex-start" }}>
 
-        {/* Sidebar */}
+        {/* ── Sidebar ── */}
         <div style={{
-          width: 188, flexShrink: 0, background: "#0f1623",
-          borderRight: "1px solid #1e2a3a", padding: "18px 0",
+          width: 188, flexShrink: 0, background: T.bgSidebar,
+          borderRight: `1px solid ${T.border}`, padding: "18px 0",
           position: "sticky", top: 60,
           height: "calc(100vh - 60px)", overflowY: "auto",
         }}>
           <div style={{ padding: "0 14px 14px" }}>
-            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#64748b", marginBottom: 8 }}>Swimlanes</div>
+            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: T.textMuted, marginBottom: 8 }}>Swimlanes</div>
             {LANES.map(lane => (
-              <div key={lane.id} onClick={() => setFocusLane(focusLane === lane.id ? null : lane.id)} style={{
-                display: "flex", alignItems: "center", gap: 8, padding: "5px 8px",
-                borderRadius: 5, cursor: "pointer", marginBottom: 2,
-                background: focusLane === lane.id ? "rgba(255,255,255,0.05)" : "transparent",
-                opacity: focusLane && focusLane !== lane.id ? 0.25 : 1,
-                transition: "all 0.15s",
-              }}>
+              <div key={lane.id} onClick={() => { setFocusLane(focusLane === lane.id ? null : lane.id); playClick(); }}
+                onMouseEnter={() => playHover()}
+                style={{
+                  display: "flex", alignItems: "center", gap: 8, padding: "5px 8px",
+                  borderRadius: 5, cursor: "pointer", marginBottom: 2,
+                  background: focusLane === lane.id ? "rgba(255,255,255,0.8)" : "transparent",
+                  opacity: focusLane && focusLane !== lane.id ? 0.35 : 1,
+                  transition: "all 0.15s",
+                }}>
                 <div style={{ width: 8, height: 8, borderRadius: 2, background: lane.accent, flexShrink: 0 }} />
-                <span style={{ fontSize: 12, color: "#94a3b8" }}>{lane.label}</span>
+                <span style={{ fontSize: 12, color: T.text }}>{lane.label}</span>
               </div>
             ))}
           </div>
-          <div style={{ height: 1, background: "#1e2a3a", margin: "4px 14px 14px" }} />
+          <div style={{ height: 1, background: T.border, margin: "4px 14px 14px" }} />
           <div style={{ padding: "0 14px 14px" }}>
-            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#64748b", marginBottom: 8 }}>Status</div>
+            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: T.textMuted, marginBottom: 8 }}>Status</div>
             {Object.entries(STATUS).map(([k, v]) => (
               <div key={k} style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
                 <div style={{ width: 8, height: 8, borderRadius: 2, background: v.bg, border: `1px solid ${v.border}`, flexShrink: 0 }} />
-                <span style={{ fontSize: 12, color: "#94a3b8" }}>{v.label}</span>
+                <span style={{ fontSize: 12, color: T.text }}>{v.label}</span>
               </div>
             ))}
           </div>
-          <div style={{ height: 1, background: "#1e2a3a", margin: "4px 14px 14px" }} />
+          <div style={{ height: 1, background: T.border, margin: "4px 14px 14px" }} />
           <div style={{ padding: "0 14px" }}>
-            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#64748b", marginBottom: 8 }}>Key Dates</div>
+            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: T.textMuted, marginBottom: 8 }}>Key Dates</div>
             {(view === "d1" ? [
-              { code:"NOW", val:"Feb 17, 2026", c:"#60a5fa" },
-              { code:"MOB", val:"Mar 1–31",     c:"#a78bfa" },
-              { code:"RDY", val:"Apr 1–30",     c:"#fbbf24" },
-            { code:"D-1", val:"May 1, 2026", c:"#f87171" },
+              { code:"NOW", val:"Feb 18, 2026", c:"#2563eb" },
+              { code:"MOB", val:"Mar 1–31",     c:"#7c3aed" },
+              { code:"RDY", val:"Apr 1–30",     c:"#d97706" },
+              { code:"D-1", val:"May 1, 2026",  c:"#dc2626" },
             ] : [
-              { code:"Mo1", val:"Post-close stabilize", c:"#34d399" },
-              { code:"Mo2", val:"Core enablement",      c:"#10b981" },
-              { code:"Mo4", val:"Migration prep",       c:"#059669" },
-              { code:"Mo6", val:"TSA Exit ✓",           c:"#6ee7b7" },
+              { code:"Mo1", val:"Post-close stabilize", c:"#059669" },
+              { code:"Mo2", val:"Core enablement",      c:"#0891b2" },
+              { code:"Mo4", val:"Migration prep",       c:"#0369a1" },
+              { code:"Mo6", val:"TSA Exit ✓",           c:"#047857" },
             ]).map(d => (
               <div key={d.code} style={{ display: "flex", gap: 8, alignItems: "baseline", marginBottom: 6 }}>
                 <span style={{ fontSize: 11, fontFamily: "monospace", fontWeight: 700, color: d.c, minWidth: 28 }}>{d.code}</span>
-                <span style={{ fontSize: 12, color: "#94a3b8" }}>{d.val}</span>
+                <span style={{ fontSize: 12, color: T.text }}>{d.val}</span>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Grid */}
+        {/* ── Grid ── */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ minWidth: 800 }}>
+
             {/* Phase header */}
             <div style={{
               display: "grid", gridTemplateColumns: `168px repeat(${phases.length}, 1fr)`,
-              borderBottom: "1px solid #1e2a3a",
-              background: "#0d1117", position: "sticky", top: 59, zIndex: 50,
+              borderBottom: `1px solid ${T.border}`,
+              background: T.bgPhaseHdr, position: "sticky", top: 59, zIndex: 50,
+              boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
             }}>
-              <div style={{ borderRight: "1px solid #1e2a3a" }} />
+              <div style={{ borderRight: `1px solid ${T.border}` }} />
               {phases.map((p, i) => (
                 <div key={p.id} style={{
                   padding: "10px 14px",
-                  borderRight: i < phases.length - 1 ? "1px solid #1e2a3a" : "none",
-                  borderTop: `2px solid ${p.accent}`,
+                  borderRight: i < phases.length - 1 ? `1px solid ${T.border}` : "none",
+                  borderTop: `3px solid ${p.accent}`,
+                  background: `linear-gradient(180deg, ${p.accent}08 0%, transparent 100%)`,
                 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: p.accent }}>{p.label}</div>
-                  <div style={{ fontSize: 11, color: "#475569", marginTop: 2, fontFamily: "monospace" }}>{p.dates}</div>
+                  <div style={{ fontSize: 11, color: T.textMuted, marginTop: 2, fontFamily: "monospace" }}>{p.dates}</div>
                 </div>
               ))}
             </div>
 
             {/* Rows */}
-            {LANES.map(lane => (
+            {LANES.map((lane, li) => (
               <div key={lane.id} style={{
                 display: "grid", gridTemplateColumns: `168px repeat(${phases.length}, 1fr)`,
-                borderBottom: "1px solid #1e2a3a",
-                opacity: !focusLane || focusLane === lane.id ? 1 : 0.12,
+                borderBottom: `1px solid ${T.border}`,
+                background: li % 2 === 0 ? T.bgGrid : T.rowAlt,
+                opacity: !focusLane || focusLane === lane.id ? 1 : 0.18,
                 transition: "opacity 0.2s",
               }}>
-                <div onClick={() => setFocusLane(focusLane === lane.id ? null : lane.id)} style={{
-                  display: "flex", alignItems: "flex-start", gap: 8, padding: "14px 12px",
-                  borderRight: "1px solid #1e2a3a", cursor: "pointer",
-                  background: "#0f1623", position: "sticky", left: 0, zIndex: 10,
-                }}>
+                {/* Lane label */}
+                <div onClick={() => { setFocusLane(focusLane === lane.id ? null : lane.id); playClick(); }}
+                  onMouseEnter={() => playHover()}
+                  style={{
+                    display: "flex", alignItems: "flex-start", gap: 8, padding: "14px 12px",
+                    borderRight: `1px solid ${T.border}`, cursor: "pointer",
+                    background: T.laneLabel, position: "sticky", left: 0, zIndex: 10,
+                    boxShadow: "1px 0 3px rgba(0,0,0,0.04)",
+                  }}>
                   <div style={{ width: 3, height: 28, borderRadius: 2, background: lane.accent, flexShrink: 0, marginTop: 2 }} />
                   <div style={{ fontSize: 13, fontWeight: 700, color: lane.accent, lineHeight: 1.4 }}>{lane.label}</div>
                 </div>
+
+                {/* Phase cells */}
                 {phases.map((p, pi) => {
                   const cellTasks = tasks[lane.id]?.[p.id] || [];
                   return (
                     <div key={p.id} style={{
-                      padding: "9px 9px", minHeight: 76,
-                      borderRight: pi < phases.length - 1 ? "1px solid #1e2a3a" : "none",
-                      display: "flex", flexDirection: "column", gap: 4,
+                      padding: "9px 9px", minHeight: 80,
+                      borderRight: pi < phases.length - 1 ? `1px solid ${T.border}` : "none",
+                      display: "flex", flexDirection: "column", gap: 5,
                     }}>
                       {cellTasks.map((task, ti) => {
                         const s = STATUS[task.status];
                         const isSel = selected && selected.lane === lane.id && selected.phase === p.id && selected.idx === ti;
                         return (
                           <div key={ti}
-                            onClick={() => setSelected(isSel ? null : { lane: lane.id, phase: p.id, idx: ti, task })}
-                            style={{
-                              background: isSel ? s.bg : "rgba(255,255,255,0.03)",
-                              border: `1px solid ${isSel ? s.border : "#1e2a3a"}`,
-                              borderRadius: 5, padding: "5px 9px",
-                              fontSize: 12, color: isSel ? s.text : "#94a3b8",
-                              cursor: "pointer", transition: "all 0.12s", lineHeight: 1.4,
+                            onClick={() => { setSelected(isSel ? null : { lane: lane.id, phase: p.id, idx: ti, task }); playClick(); }}
+                            onMouseEnter={e => {
+                              playHover();
+                              e.currentTarget.style.background = s.bg;
+                              e.currentTarget.style.borderColor = s.border;
+                              e.currentTarget.style.color = s.text;
+                              e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.08)";
+                              e.currentTarget.style.transform = "translateY(-1px)";
                             }}
-                            onMouseEnter={e => { e.currentTarget.style.background = s.bg; e.currentTarget.style.borderColor = s.border; e.currentTarget.style.color = s.text; }}
-                            onMouseLeave={e => { if (!isSel) { e.currentTarget.style.background = "rgba(255,255,255,0.03)"; e.currentTarget.style.borderColor = "#1e2a3a"; e.currentTarget.style.color = "#94a3b8"; } }}
+                            onMouseLeave={e => {
+                              if (!isSel) {
+                                e.currentTarget.style.background = "transparent";
+                                e.currentTarget.style.borderColor = T.border;
+                                e.currentTarget.style.color = T.text;
+                                e.currentTarget.style.boxShadow = "none";
+                                e.currentTarget.style.transform = "translateY(0)";
+                              }
+                            }}
+                            style={{
+                              background: isSel ? s.bg : "transparent",
+                              border: `1px solid ${isSel ? s.border : T.border}`,
+                              borderRadius: 5, padding: "5px 9px",
+                              fontSize: 12, color: isSel ? s.text : T.text,
+                              cursor: "pointer", transition: "all 0.12s", lineHeight: 1.4,
+                              boxShadow: isSel ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+                            }}
                           >{task.label}</div>
                         );
                       })}
-                      {cellTasks.length === 0 && <div style={{ fontSize: 10, color: "#1e293b", paddingTop: 4 }}>—</div>}
+                      {cellTasks.length === 0 && <div style={{ fontSize: 11, color: T.textFaint, paddingTop: 4 }}>—</div>}
                     </div>
                   );
                 })}
@@ -440,27 +542,31 @@ function App() {
         </div>
       </div>
 
-      {/* Detail drawer */}
+      {/* ── Detail drawer ── */}
       {selected && (
         <div style={{
           position: "fixed", bottom: 0, left: 188, right: 0, zIndex: 200,
-          background: "#111827", borderTop: "1px solid #1e2a3a",
-          padding: "14px 28px", display: "flex", alignItems: "flex-start", gap: 20,
-          boxShadow: "0 -8px 32px rgba(0,0,0,0.5)",
+          background: "#ffffff", borderTop: `2px solid ${STATUS[selected.task.status].border}`,
+          padding: "16px 28px", display: "flex", alignItems: "flex-start", gap: 20,
+          boxShadow: "0 -4px 24px rgba(0,0,0,0.1)",
         }}>
           <div style={{ flex: 1 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 5 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
               <div style={{
-                fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 4, textTransform: "uppercase", letterSpacing: "0.07em",
-                background: STATUS[selected.task.status].bg, border: `1px solid ${STATUS[selected.task.status].border}`, color: STATUS[selected.task.status].text,
+                fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 4,
+                textTransform: "uppercase", letterSpacing: "0.07em",
+                background: STATUS[selected.task.status].bg,
+                border: `1px solid ${STATUS[selected.task.status].border}`,
+                color: STATUS[selected.task.status].text,
               }}>{STATUS[selected.task.status].label}</div>
-              <div style={{ fontSize: 16, fontWeight: 700 }}>{selected.task.label}</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "#1e293b" }}>{selected.task.label}</div>
             </div>
-            <div style={{ fontSize: 13, color: "#64748b", lineHeight: 1.7 }}>{selected.task.detail}</div>
+            <div style={{ fontSize: 13, color: "#475569", lineHeight: 1.7 }}>{selected.task.detail}</div>
           </div>
-          <button onClick={() => setSelected(null)} style={{
-            background: "#1e293b", border: "1px solid #334155", borderRadius: 6,
-            color: "#64748b", fontSize: 11, padding: "5px 12px", cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
+          <button onClick={() => { setSelected(null); playClick(); }} style={{
+            background: "#f1f5f9", border: `1px solid ${T.border}`, borderRadius: 6,
+            color: T.textMuted, fontSize: 11, padding: "5px 12px",
+            cursor: "pointer", fontFamily: "inherit", flexShrink: 0,
           }}>Close ✕</button>
         </div>
       )}
