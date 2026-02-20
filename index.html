@@ -231,12 +231,14 @@ const TASKS_D1 = {
         voiceover:"Day 1 is confirmed for May 1st, 2026. This is the anchor date for every downstream dependency in the integration. Every workstream lead should now have this date locked." },
       { label:"Lock MVEE Definition", status:"amber", type:"precondition", depChain:"mvee",
         detail:"Define binary Day-1 success: Can I log in? Can I reach my apps? Do I know who to call? Get Paul/Marc sign-off. BLOCKS: IVR config, Survival Kit, Single Front Door, War Room Bootcamp.",
-        voiceover:"The MVEE defines what Day 1 success actually means. Three binary questions: Can I log in? Can I reach my Day 1 applications? Do I know who to call? Sign-off from Paul and Marc is critical to prevent scope creep." },
+        voiceover:"The MVEE defines what Day 1 success actually means. Three binary questions: Can I log in? Can I reach my Day 1 applications? Do I know who to call? Sign-off from Paul and Marc is critical to prevent scope creep.",
+        links:[{ label:"Day-1 MVEE Package", url:"https://docs.google.com/document/d/1iksnrrm2hql2O8nXgpf2lOYqKyvpY7J6w-wM7a7YqXM/edit?usp=sharing" }] },
     ],
     mobilize:[
       { label:"Manager Cascade Pack", status:"blue", type:"standard",
         detail:"Scripted talking points for site managers. Core message: 'This change is permanent.' Counters the Suez middle-manager pocket veto. Due 2 weeks before close.",
-        voiceover:null },
+        voiceover:null,
+        links:[{ label:"Manager Cascade Pack (Draft)", url:"https://docs.google.com/document/d/1RLHw5Us_ixD8oO1EXk6ltMK8QiL6u9_w_rllDhO3Xyo/edit?usp=sharing" }] },
       { label:"Integration Narrative", status:"blue", type:"standard",
         detail:"Draft the Change Story — the strategic why behind the integration. Aligns once Cecilia locks the Day-1 Target Operating Model.",
         voiceover:null },
@@ -1170,6 +1172,31 @@ function App() {
               )}
             </div>
             <div style={{ fontSize:13, color:"#475569", lineHeight:1.7 }}>{selected.task.detail}</div>
+
+            {/* Document Links */}
+            {selected.task.links && selected.task.links.length > 0 && (
+              <div style={{ marginTop:10, paddingTop:10, borderTop:"1px solid #e2e8f0" }}>
+                <div style={{ fontSize:10, fontWeight:700, color:"#94a3b8", fontFamily:"'IBM Plex Mono',monospace", letterSpacing:"0.05em", marginBottom:6 }}>
+                  LINKED DOCUMENTS
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                  {selected.task.links.map((link, i) => (
+                    <a key={i} href={link.url} target="_blank" rel="noopener noreferrer"
+                      style={{ display:"inline-flex", alignItems:"center", gap:6,
+                        fontSize:12, fontWeight:600, color:"#2563eb",
+                        background:"#eff6ff", border:"1px solid #bfdbfe",
+                        borderRadius:5, padding:"5px 10px", textDecoration:"none",
+                        transition:"all 0.15s ease", width:"fit-content" }}
+                      onMouseEnter={e => { e.currentTarget.style.background="#dbeafe"; e.currentTarget.style.borderColor="#93c5fd"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background="#eff6ff"; e.currentTarget.style.borderColor="#bfdbfe"; }}>
+                      <span style={{ fontSize:13 }}>📄</span>
+                      {link.label}
+                      <span style={{ fontSize:10, color:"#93c5fd" }}>↗</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           <button onClick={() => { setSelected(null); stop(); playClick(); }}
             style={{ background:"#f1f5f9", border:`1px solid #e2e8f0`, borderRadius:5,
