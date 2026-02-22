@@ -1,2177 +1,1225 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>OCM Readiness Map Builder</title>
-
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Outfit:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
-
-<!-- PDF + DOCX parsing -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.7.2/mammoth.browser.min.js"></script>
-
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Liberty — Readiness Map v3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root{
-    --navy:#0f172a;
-    --navy2:#0b1220;
-    --slate:#475569;
-    --slate2:#64748b;
-    --border:#e2e8f0;
-    --off:#f8fafc;
-    --off2:#f1f5f9;
-    --white:#ffffff;
-    --blue:#2563eb;
-    --green:#059669;
-    --amber:#d97706;
-    --orange:#ea580c;
-    --red:#dc2626;
-
-    --serif:'Lora', Georgia, serif;
-    --sans:'Outfit', system-ui, sans-serif;
-    --mono:'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-
-    --shadow-sm:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
-    --shadow-md:0 6px 18px rgba(0,0,0,.12),0 2px 8px rgba(0,0,0,.06);
-    --shadow-lg:0 14px 40px rgba(0,0,0,.18),0 6px 18px rgba(0,0,0,.10);
-
-    --radius:12px;
-    --glow-blue:0 0 0 3px rgba(37,99,235,.15);
-  }
-  html, body, #root { height:100%; }
-  body{
-    font-family:var(--sans);
-    font-size:15px;
-    background:var(--off);
-    color:var(--navy);
-  }
-
-  ::-webkit-scrollbar{width:6px;height:6px;}
-  ::-webkit-scrollbar-track{background:transparent;}
-  ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:999px;}
-  ::-webkit-scrollbar-thumb:hover{background:#94a3b8;}
-
-  /* Top bar */
-  .appTopBar{
-    background:linear-gradient(180deg,var(--navy) 0%, var(--navy2) 100%);
-    color:#e2e8f0;
-    border-bottom:1px solid rgba(255,255,255,.08);
-    padding:12px 16px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:12px;
-  }
-  .subtle{ color:#94a3b8; }
-
-  /* Controls */
-  .btn{
-    border:none;
-    cursor:pointer;
-    font-family:var(--sans);
-    font-weight:800;
-    padding:9px 12px;
-    border-radius:12px;
-    display:inline-flex;
-    align-items:center;
-    gap:8px;
-    transition:transform .08s ease, box-shadow .14s ease, background .14s ease, color .14s ease, opacity .14s ease;
-    user-select:none;
-    line-height:1;
-  }
-  .btn:active{ transform:translateY(1px); }
-  .btn-primary{ background:var(--blue); color:#fff; box-shadow:var(--shadow-sm); }
-  .btn-primary:hover{ box-shadow:var(--shadow-md); }
-  .btn-secondary{ background:#fff; color:var(--navy); border:1px solid var(--border); }
-  .btn-secondary:hover{ background:var(--off2); }
-  .btn-ghost{ background:transparent; color:var(--navy); border:1px solid transparent; }
-  .btn-ghost:hover{ background:var(--off2); }
-  .btn-danger{ background:#fff; color:var(--red); border:1px solid #fecaca; }
-  .btn-danger:hover{ background:#fff1f2; }
-
-  .btn-dark-ghost{ background:transparent; color:#e2e8f0; border:1px solid rgba(226,232,240,.18); }
-  .btn-dark-ghost:hover{ background:rgba(255,255,255,.06); }
-  .btn-dark-chip{ background:rgba(255,255,255,.06); color:#e2e8f0; border:1px solid rgba(226,232,240,.18); }
-
-  .inp{
-    width:100%;
-    border-radius:12px;
-    border:1px solid var(--border);
-    padding:10px 12px;
-    background:#fff;
-    color:var(--navy);
-    outline:none;
-    font-family:var(--sans);
-    transition:box-shadow .14s ease, border-color .14s ease;
-  }
-  .inp:focus{ box-shadow:var(--glow-blue); border-color:rgba(37,99,235,.55); }
-  textarea.inp{ min-height:120px; resize:vertical; line-height:1.5; }
-
-  .lbl{
-    display:block;
-    font-size:12px;
-    font-weight:900;
-    letter-spacing:.08em;
-    font-family:var(--mono);
-    color:var(--slate2);
-    margin-bottom:8px;
-    text-transform:uppercase;
-  }
-
-  .card{
-    background:#fff;
-    border:1px solid var(--border);
-    border-radius:16px;
-    box-shadow:var(--shadow-sm);
-  }
-  .pill{
-    display:inline-flex;
-    align-items:center;
-    gap:6px;
-    border:1px solid var(--border);
-    padding:7px 10px;
-    border-radius:999px;
-    font-size:12px;
-    font-family:var(--mono);
-    font-weight:800;
-    color:#334155;
-    background:#fff;
-  }
-
-  /* Dropdown menu */
-  .menu{
-    position:absolute;
-    right:0;
-    top:34px;
-    min-width:220px;
-    padding:8px;
-    border-radius:12px;
-    background:#fff;
-    border:1px solid var(--border);
-    box-shadow:var(--shadow-lg);
-    z-index:1000;
-    animation:scaleIn .14s ease both;
-  }
-  .menu button{
-    width:100%;
-    text-align:left;
-    background:transparent;
-    border:none;
-    border-radius:10px;
-    padding:10px 10px;
-    cursor:pointer;
-    font-family:var(--sans);
-    font-weight:800;
-    color:#334155;
-  }
-  .menu button:hover{ background:var(--off2); }
-  .menu .danger{ color:var(--red); }
-
-  @keyframes scaleIn{ from{ transform:translateY(-4px) scale(.98); opacity:0; } to{ transform:translateY(0) scale(1); opacity:1; } }
-  @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
-  @keyframes spin{ to{ transform:rotate(360deg);} }
-  .fade-up{ animation:fadeUp .18s ease both; }
-  @keyframes fadeUp{ from{ transform:translateY(6px); opacity:0; } to{ transform:translateY(0); opacity:1; } }
-
-  /* Overlay */
-  .overlay{
-    position:fixed;
-    inset:0;
-    z-index:10000;
-    background:rgba(255,255,255,.72);
-    backdrop-filter: blur(4px);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    animation:fadeIn .15s ease both;
-  }
-  .overlayCard{
-    background:#fff;
-    border:1px solid var(--border);
-    border-radius:16px;
-    padding:18px 18px;
-    box-shadow:var(--shadow-lg);
-    min-width:280px;
-    max-width:520px;
-  }
-
-  /* ===== Stage 4 layout ===== */
-  .stage4Shell{
-    display:flex;
-    height:100%;
-    min-height:0;
-    background:var(--off);
-  }
-
-  /* Left sidebar */
-  .leftSide{
-    width:320px;
-    border-right:1px solid var(--border);
-    background:#0b1220;
-    color:#e2e8f0;
-    display:flex;
-    flex-direction:column;
-    min-width:0;
-  }
-  .leftSide.rail{
-    width:58px;
-  }
-  .leftSideHeader{
-    padding:12px 12px;
-    border-bottom:1px solid rgba(226,232,240,.14);
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:8px;
-  }
-  .leftTabs{
-    display:flex;
-    border-bottom:1px solid rgba(226,232,240,.14);
-  }
-
-  .leftRailIcon{
-    width:42px;height:42px;border-radius:12px;
-    display:flex;align-items:center;justify-content:center;
-    border:1px solid rgba(226,232,240,.14);
-    background:rgba(255,255,255,.04);
-    cursor:pointer;
-  }
-  .leftRailIcon:hover{ background:rgba(255,255,255,.07); }
-
-  /* Main area */
-  .mainArea{
-    flex:1;
-    min-width:0;
-    display:flex;
-    flex-direction:column;
-  }
-
-  /* Grid scroll region */
-  .gridWrap{
-    flex:1;
-    min-height:0;
-    overflow:auto;
-    padding:14px;
-  }
-  .mapGrid{
-    display:grid;
-    gap:10px;
-    align-items:stretch;
-  }
-  .phaseHeaderCell{ overflow:visible; position:relative; }
-  .phaseCell{
-    position:relative;
-    min-width:260px;
-    overflow:visible;
-    z-index:1; /* below sticky column */
-  }
-  .phaseStripe{ background:#f8fafc; }
-
-  /* Sticky Workstream column (no bleed) */
-  .laneHeaderCell{
-    position:sticky;
-    left:0;
-    z-index:200;
-    background:#fff;
-    background-clip:padding-box;
-    isolation:isolate;
-    box-shadow:2px 0 10px rgba(0,0,0,.06);
-  }
-  .laneHeaderCell::after{
-    content:"";
-    position:absolute;
-    top:0;
-    right:-10px;
-    width:10px;
-    height:100%;
-    pointer-events:none;
-    background:linear-gradient(to right, rgba(0,0,0,.08), rgba(0,0,0,0));
-  }
-
-  /* Lane tile */
-  .laneTile{
-    position:relative;
-    padding:10px 10px 10px 12px;
-    display:flex;
-    align-items:flex-start;
-    justify-content:space-between;
-    gap:10px;
-  }
-  .laneBar{
-    position:absolute;
-    left:0; top:0; bottom:0;
-    width:5px;
-    border-top-left-radius:16px;
-    border-bottom-left-radius:16px;
-  }
-  .iconBtn{
-    width:30px;height:30px;border-radius:10px;
-    border:1px solid var(--border);
-    background:#fff;
-    cursor:pointer;
-    display:flex;align-items:center;justify-content:center;
-    font-weight:900;
-    transition:background .14s ease, box-shadow .14s ease;
-  }
-  .iconBtn:hover{ background:var(--off2); box-shadow:var(--shadow-sm); }
-  .iconBtn.danger{ border-color:#fecaca; color:var(--red); }
-  .iconBtn.danger:hover{ background:#fff1f2; }
-
-  /* Task card */
-  .taskCard{
-    position:relative;
-    background:#fff;
-    border:1px solid var(--border);
-    border-radius:12px;
-    box-shadow:var(--shadow-sm);
-    transition:transform .14s ease, box-shadow .14s ease, opacity .14s ease;
-    cursor:pointer;
-    overflow:hidden;
-  }
-  .taskCard:hover{ transform:translateY(-1px); box-shadow:var(--shadow-md); }
-  .taskBorder{
-    position:absolute; left:0; top:0; bottom:0;
-    width:5px;
-  }
-  .taskInner{ padding:10px 10px 10px 12px; display:flex; flex-direction:column; gap:6px; }
-  .taskTitle{ font-weight:900; font-size:13px; color:var(--navy); }
-  .taskMeta{ font-size:12px; color:var(--slate2); font-family:var(--mono); }
-  .taskRisk{ font-size:11px; font-family:var(--mono); font-weight:900; color:#b45309; }
-
-  /* Right drawer */
-  .drawer{
-    width:420px;
-    border-left:1px solid var(--border);
-    background:#f3f4f6;
-    box-shadow:inset 8px 0 18px rgba(0,0,0,.05);
-    display:flex;
-    flex-direction:column;
-    min-width:0;
-  }
-  .drawer.rail{ width:58px; }
-  .drawerHeader{
-    padding:12px 12px;
-    border-bottom:1px solid rgba(15,23,42,.08);
-    display:flex; align-items:center; justify-content:space-between; gap:8px;
-  }
-  .drawerBody{
-    padding:12px;
-    overflow:auto;
-    min-height:0;
-  }
-
-  /* Phase date popover */
-  .pop{
-    position:absolute;
-    top:44px;
-    right:10px;
-    width:260px;
-    padding:10px;
-    border-radius:14px;
-    background:#fff;
-    border:1px solid var(--border);
-    box-shadow:var(--shadow-lg);
-    z-index:1200;
-  }
-
-  /* Small checkbox */
-  .chk{
-    width:18px;height:18px;
-    accent-color:var(--blue);
-    cursor:pointer;
-  }
-
-  /* Sidebar lane row (workstreams tab) */
-  .laneRow{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:10px;
-    padding:10px 10px;
-    border-left:5px solid #64748b;
-  }
-  .laneRowRight{ display:flex; align-items:center; gap:8px; }
-
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-padding-top: 170px; }
+body { font-family: 'IBM Plex Sans', system-ui, sans-serif; background: #f1f5f9; color: #1e293b; min-height: 100vh; overflow-x: auto; }
+button { font-family: inherit; }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #e2e8f0; }
+::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #64748b; }
 </style>
 </head>
 <body>
 <div id="root"></div>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
 <script type="text/babel">
-const {useEffect,useMemo,useRef,useState} = React;
+const { useState, useRef, useCallback, useEffect } = React;
 
-/* ===== Click Audio (optional) ===== */
-const ClickAudio = (() => {
-  let enabled = true;
-  let ctx = null;
-  function ensure(){
-    if(!ctx){
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if(!AC) return null;
-      ctx = new AC();
-    }
-    return ctx;
-  }
-  function click(){
-    if(!enabled) return;
-    const c = ensure();
-    if(!c) return;
-    const o = c.createOscillator();
-    const g = c.createGain();
-    o.type = "square";
-    o.frequency.value = 680;
-    g.gain.value = 0.02;
-    o.connect(g); g.connect(c.destination);
-    o.start();
-    setTimeout(()=>{ try{o.stop();}catch(_){} }, 26);
-  }
-  return {
-    click,
-    setEnabled:(v)=>{ enabled = !!v; },
-    isEnabled:()=>enabled
-  };
-})();
+// ── Audio ─────────────────────────────────────────────────────────────────────
+function useAudio(audioOn) {
+  const ctxRef = useRef(null);
+  const getCtx = useCallback(() => {
+    if (!ctxRef.current) ctxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctxRef.current.state === 'suspended') ctxRef.current.resume();
+    return ctxRef.current;
+  }, []);
+  const playHover = useCallback(() => {
+    if (!audioOn) return;
+    try {
+      const ctx = getCtx();
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1040, ctx.currentTime + 0.06);
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.03, ctx.currentTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.09);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.09);
+    } catch(e) {}
+  }, [audioOn, getCtx]);
+  const playClick = useCallback(() => {
+    if (!audioOn) return;
+    try {
+      const ctx = getCtx();
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(520, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(320, ctx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.06, ctx.currentTime + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.14);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.14);
+    } catch(e) {}
+  }, [audioOn, getCtx]);
+  return { playHover, playClick };
+}
 
-/* ===== Constants ===== */
-const LANE_PALETTE = ["#2563eb","#0d9488","#7c3aed","#dc2626","#d97706","#059669","#0ea5e9","#9333ea","#475569"];
-const STATUS_META = {
-  complete:{label:"COMPLETE", color:"#059669"},
-  green:{label:"ON TRACK", color:"#059669"},
-  blue:{label:"IN PROGRESS", color:"#2563eb"},
-  amber:{label:"WATCH", color:"#d97706"},
-  orange:{label:"AT RISK", color:"#ea580c"},
-  red:{label:"CRITICAL", color:"#dc2626"},
-  blocked:{label:"BLOCKED", color:"#b91c1c"},
-};
-const DIMENSIONS = [
-  {id:"scope", label:"Scope & Complexity", opts:[{v:1,l:"Low"},{v:2,l:"Medium"},{v:3,l:"High",esc:true}]},
-  {id:"impact", label:"Business Impact", opts:[{v:1,l:"Low"},{v:2,l:"Medium"},{v:3,l:"High",esc:true}]},
-  {id:"audience", label:"Audience Size", opts:[{v:1,l:"Small"},{v:2,l:"Moderate"},{v:3,l:"Large"}]},
-  {id:"readiness", label:"Current Readiness", opts:[{v:1,l:"High"},{v:2,l:"Mixed"},{v:3,l:"Low"}]},
-  {id:"risk", label:"Change Risk", opts:[{v:1,l:"Low"},{v:2,l:"Medium"},{v:3,l:"High",esc:true}]},
+// ── Speech ────────────────────────────────────────────────────────────────────
+function useSpeech(audioOn) {
+  const [speaking, setSpeaking] = useState(false);
+  const stop = useCallback(() => { window.speechSynthesis.cancel(); setSpeaking(false); }, []);
+  const speak = useCallback((text) => {
+    if (!audioOn || !text) return;
+    window.speechSynthesis.cancel();
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.rate = 0.95; utt.pitch = 1.0; utt.volume = 1.0;
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(v => v.name.includes('Samantha') || v.name.includes('Karen') || v.name.includes('Daniel') || v.name.includes('Google US') || v.name.includes('Microsoft Aria'));
+    if (preferred) utt.voice = preferred;
+    utt.onstart = () => setSpeaking(true);
+    utt.onend = () => setSpeaking(false);
+    utt.onerror = () => setSpeaking(false);
+    window.speechSynthesis.speak(utt);
+  }, [audioOn]);
+  useEffect(() => { if (!audioOn) stop(); }, [audioOn, stop]);
+  return { speak, stop, speaking };
+}
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+const PHASES_D1 = [
+  { id:"target",    label:"Targeting",    dates:"Now → Feb 28",   accent:"#3b82f6", arrow:"MVEE + site list must be locked before Mobilization begins" },
+  { id:"mobilize",  label:"Mobilization", dates:"Mar 1 → Mar 31", accent:"#8b5cf6", arrow:"Manager Cascade Pack + Single Front Door must be ready before Readiness phase" },
+  { id:"readiness", label:"Readiness",    dates:"Apr 1 → Apr 30", accent:"#f59e0b", arrow:"Go/No-Go brief must clear before Day-1 execution" },
+  { id:"exec",      label:"⚡ Day-1",      dates:"May 1 + 72 hrs", accent:"#ef4444" },
 ];
-const TIER_CFG = {
-  1:{label:"Tier 1",sub:"High Complexity / Broad Impact",color:"#dc2626",bg:"#fff1f2",bdr:"#fecaca",
-     desc:"Full OCM program with dedicated planning, multi-channel communications, training strategy, readiness/risk management, and adoption reinforcement.",
-     phases:["Targeting","Mobilization","Readiness","Day-1 / Go-Live","Stabilization","TSA / Sustainment"],
-     lanes:["Stakeholder & Comms","Training & Enablement","Readiness & Risk","Technical / Systems","Leadership & Sponsorship"],
-     deliverables:["Stakeholder Map","Change Impact Analysis","Full OCM Plan","Comms Strategy","Training Program","Readiness Assessments","Adoption Metrics","Resistance Management","Lessons Learned"],
-     statuses:["complete","green","blue","amber","orange","red","blocked"]},
-  2:{label:"Tier 2",sub:"Moderate Complexity / Targeted Impact",color:"#0d9488",bg:"#f0fdfa",bdr:"#99f6e4",
-     desc:"Targeted OCM support at key milestones — readiness assessment, key communications, training deliverables, and stakeholder engagement.",
-     phases:["Planning","Execution","Go-Live","Sustainment"],
-     lanes:["Stakeholder & Comms","Training & Enablement","Readiness & Risk"],
-     deliverables:["Lightweight CM Plan","Stakeholder List","Comms Plan","Training Summary","Pulse Checks","Lessons Learned"],
-     statuses:["complete","green","blue","amber","orange","red","blocked"]},
-  3:{label:"Tier 3",sub:"Low Complexity / Limited Impact",color:"#64748b",bg:"#f8fafc",bdr:"#e2e8f0",
-     desc:"Light-touch support — self-service materials, templates, and optional PM-led communications with OCM check-in as needed.",
-     phases:["Setup","Delivery","Close"],
-     lanes:["Key Actions"],
-     deliverables:["Stakeholder Notification","Quick Reference Guide","Go/No-Go Checklist"],
-     statuses:["complete","green","blue","amber","orange","red","blocked"]},
+const PHASES_TSA = [
+  { id:"stabilize", label:"Stabilize",  dates:"D-1 → Month 2", accent:"#10b981", arrow:"Hypercare data + ticket trends must inform Enable phase priorities" },
+  { id:"enable",    label:"Enable",     dates:"Month 2 → 4",   accent:"#06b6d4", arrow:"SAP role mapping + power user competency must be validated before Migration" },
+  { id:"migrate",   label:"Migrate",    dates:"Month 4 → 6",   accent:"#2563eb", arrow:"Pre-simulation of month-end close required before SAP go-live" },
+  { id:"exit",      label:"✓ TSA Exit", dates:"~Month 6",      accent:"#059669" },
+];
+
+const STATUS = {
+  red:    { bg:"rgba(220,38,38,0.08)",   text:"#dc2626", border:"rgba(220,38,38,0.35)",   label:"Critical",  dot:"#dc2626" },
+  issue:  { bg:"rgba(234,88,12,0.08)",   text:"#ea580c", border:"rgba(234,88,12,0.35)",   label:"Issue",     dot:"#ea580c" },
+  amber:  { bg:"rgba(217,119,6,0.08)",   text:"#b45309", border:"rgba(217,119,6,0.3)",    label:"At Risk",   dot:"#d97706" },
+  green:  { bg:"rgba(5,150,105,0.08)",   text:"#047857", border:"rgba(5,150,105,0.3)",    label:"On Track",  dot:"#059669" },
+  blue:   { bg:"rgba(37,99,235,0.07)",   text:"#1d4ed8", border:"rgba(37,99,235,0.25)",   label:"Planned",   dot:"#2563eb" },
+  gray:   { bg:"rgba(100,116,139,0.06)", text:"#475569", border:"rgba(100,116,139,0.2)",  label:"Deferred",  dot:"#64748b" },
 };
 
-function getTier(sc){
-  const total = Object.values(sc).reduce((a,b)=>a+b,0);
-  const esc = DIMENSIONS.some(d => d.opts.find(o=>o.v===sc[d.id])?.esc);
-  return (esc || total>=20) ? 1 : (total>=14 ? 2 : 3);
-}
+const TASK_TYPES = {
+  precondition: { icon:"🔒", label:"Pre-condition", desc:"Must complete before downstream tasks can begin", color:"#7c3aed" },
+  blocked:      { icon:"⛓",  label:"Blocked",       desc:"Waiting on an external input or upstream dependency", color:"#dc2626" },
+  parallel:     { icon:"⇌",  label:"Parallel",      desc:"Can run simultaneously with other workstreams", color:"#2563eb" },
+  handoff:      { icon:"→",  label:"Handoff",        desc:"Owned elsewhere — OCM monitors, does not deliver", color:"#64748b" },
+  standard:     { icon:"",   label:"Standard",       desc:"Core OCM delivery item", color:"#334155" },
+};
 
-/* ===== Anthropic Call (optional) ===== */
-async function callClaude(userMsg, apiKey){
-  const res = await fetch("https://api.anthropic.com/v1/messages",{
-    method:"POST",
-    headers:{
-      "Content-Type":"application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true"
-    },
-    body: JSON.stringify({
-      model:"claude-sonnet-4-5",
-      max_tokens:1500,
-      system:"You are an expert OCM strategist. Return ONLY valid JSON — no markdown, no explanation, no backticks.",
-      messages:[{role:"user",content:userMsg}]
-    })
-  });
-  if(!res.ok){
-    const e = await res.json().catch(()=>({}));
-    throw new Error(e?.error?.message || `HTTP ${res.status}`);
-  }
-  const data = await res.json();
-  const raw = (data.content||[]).map(c=>c.text||"").join("").trim();
-  const clean = raw.replace(/^```json\s*/,"").replace(/^```\s*/,"").replace(/\s*```$/,"").trim();
-  return JSON.parse(clean);
-}
+const LANES = [
+  { id:"ocm",       label:"OCM / Comms",           accent:"#8b5cf6" },
+  { id:"training",  label:"Training & Enablement",  accent:"#06b6d4" },
+  { id:"identity",  label:"Identity & Access",      accent:"#ef4444" },
+  { id:"workplace", label:"Workplace / Google",     accent:"#f59e0b" },
+  { id:"apps",      label:"Corporate Apps",         accent:"#10b981" },
+  { id:"infra",     label:"Infrastructure",         accent:"#6366f1" },
+  { id:"support",   label:"Support (iCare)",        accent:"#ec4899" },
+  { id:"hr",        label:"HR / People & Org",      accent:"#f97316" },
+];
 
-/* ===== Utilities ===== */
-function getTaskId(lane, phase, idx){ return `${lane}||${phase}||${idx}`; }
-function parseTaskId(id){
-  const [lane,phase,idx] = String(id||"").split("||");
-  return {lane,phase,idx:Number(idx)};
-}
-function deepClone(x){ return JSON.parse(JSON.stringify(x)); }
+// ── Dependency Chains ─────────────────────────────────────────────────────────
+const DEPENDENCY_CHAINS = [
+  {
+    id:"site-list",
+    title:"Validated Site List",
+    blocker:"No validated site list with CE headcounts received from Deloitte/Marine",
+    owner:"Deloitte / Marine Reulier",
+    urgency:"red",
+    blocks:[
+      { lane:"support", label:"Heat Zone Tiering (88 sites)" },
+      { lane:"support", label:"Mousepad Procurement" },
+      { lane:"workplace", label:"🚨 Chromebook Procurement" },
+      { lane:"support", label:"Recruit Volunteer Army (50)" },
+    ]
+  },
+  {
+    id:"analytical-structure",
+    title:"SAP Analytical Structure",
+    blocker:"Company codes, cost centers, profit centers, WBSEs not yet built in SAP. Not visible in any Smartsheet finance workstream task.",
+    owner:"Finance Workstream (Ann Ferrizzi flagged gap — ownership unassigned)",
+    urgency:"red",
+    blocks:[
+      { lane:"hr", label:"Employee-to-cost-center mapping" },
+      { lane:"apps", label:"DOAs + System Access Provisioning" },
+      { lane:"apps", label:"Ariba/Concur Trainer Kickoff" },
+      { lane:"training", label:"SAP Power User Bootcamp" },
+    ]
+  },
+  {
+    id:"mvee",
+    title:"MVEE Definition Sign-Off",
+    blocker:"Binary Day-1 success criteria not yet signed off by Paul Watkeys / Marc Demougeot",
+    owner:"OCM Lead → Paul Watkeys / Marc Demougeot",
+    urgency:"amber",
+    blocks:[
+      { lane:"support", label:"IVR Configuration" },
+      { lane:"training", label:"Day-1 Survival Kit" },
+      { lane:"support", label:"Single Front Door Portal" },
+      { lane:"training", label:"War Room Bootcamp" },
+    ]
+  },
+  {
+    id:"workday-ownership",
+    title:"Workday Training Ownership",
+    blocker:"Written confirmation from Cecilia Cheradame that HR owns Workday training end-to-end not yet received",
+    owner:"Cecilia Cheradame / HR Workstream",
+    urgency:"amber",
+    blocks:[
+      { lane:"apps", label:"Workday Ownership Confirm" },
+      { lane:"hr", label:"Workday: tHRive Curriculum" },
+      { lane:"training", label:"TSA Training Roadmap" },
+    ]
+  },
+  {
+    id:"sap-day1-scope",
+    title:"SAP Day-1 vs. TSA Scope Decision",
+    blocker:"Must confirm with Vamsi Dongre: SAP on Legal Day-1 (April) or TSA Exit (October). An April decision collapses training window to 8 weeks.",
+    owner:"Vamsi Dongre / Corporate Apps",
+    urgency:"amber",
+    blocks:[
+      { lane:"apps", label:"⚠ Day-1 vs. TSA Scope" },
+      { lane:"apps", label:"SAP Role Mapping (Day-2+)" },
+      { lane:"training", label:"SAP Power User Bootcamp" },
+      { lane:"apps", label:"⚠ Month-End Close in SAP" },
+    ]
+  },
+  {
+    id:"ce-user-lists",
+    title:"Clean Earth User Lists",
+    blocker:"No CE employee data accessible pre-close. Blocks training volume estimates across all apps. Requesters, approvers, DOA holders all unknown.",
+    owner:"Deloitte clean-room / post-close discovery",
+    urgency:"amber",
+    blocks:[
+      { lane:"apps", label:"Ariba/Concur Trainer Kickoff" },
+      { lane:"apps", label:"Workday Ownership Confirm" },
+      { lane:"training", label:"CIA Training Scope Map" },
+      { lane:"support", label:"Heat Zone Tiering (88 sites)" },
+    ]
+  },
+  {
+    id:"salesforce-new-org",
+    title:"Salesforce New Org Timeline",
+    blocker:"New Org development targeting May 1 — already at risk of slipping per Ken Higgins / Jamie McCann. Not yet formally flagged as a program risk.",
+    owner:"Ken Higgins / Jamie McCann / Murphy's team",
+    urgency:"amber",
+    blocks:[
+      { lane:"apps", label:"Salesforce New Org Training" },
+      { lane:"apps", label:"CE Salesforce Team Onboarding" },
+    ]
+  },
+];
 
-/* ===== PDF/DOCX Text Extraction ===== */
-async function extractTextFromFile(file){
-  const ext = (file.name.split(".").pop() || "").toLowerCase();
-  const mime = (file.type || "").toLowerCase();
-  const MAX = 2000;
+// ── Task Data D1 ──────────────────────────────────────────────────────────────
+const TASKS_D1 = {
+  ocm:{
+    target:[
+      { label:"✓ Day-1 Date Confirmed", status:"green", type:"standard",
+        detail:"Day-1 confirmed as May 1, 2026. All procurement, printing, and staffing timelines anchored to this date. Verify all workstream leads have updated their plans accordingly.",
+        voiceover:"Day 1 is confirmed for May 1st, 2026. This is the anchor date for every downstream dependency in the integration. Every workstream lead should now have this date locked." },
+      { label:"Lock MVEE Definition", status:"amber", type:"precondition", depChain:"mvee",
+        detail:"Define binary Day-1 success: Can I log in? Can I reach my apps? Do I know who to call? Get Paul/Marc sign-off. BLOCKS: IVR config, Survival Kit, Single Front Door, War Room Bootcamp.",
+        voiceover:"The MVEE defines what Day 1 success actually means. Three binary questions: Can I log in? Can I reach my Day 1 applications? Do I know who to call? Sign-off from Paul and Marc is critical to prevent scope creep.",
+        links:[{ label:"Day-1 MVEE Package", url:"https://docs.google.com/document/d/1iksnrrm2hql2O8nXgpf2lOYqKyvpY7J6w-wM7a7YqXM/edit?usp=sharing" }] },
+    ],
+    mobilize:[
+      { label:"Manager Cascade Pack", status:"blue", type:"standard",
+        detail:"Scripted talking points for site managers. Core message: 'This change is permanent.' Counters the Suez middle-manager pocket veto. Due 2 weeks before close.",
+        voiceover:null,
+        links:[{ label:"Manager Cascade Pack (Draft)", url:"https://docs.google.com/document/d/1RLHw5Us_ixD8oO1EXk6ltMK8QiL6u9_w_rllDhO3Xyo/edit?usp=sharing" }] },
+      { label:"Integration Narrative", status:"blue", type:"standard",
+        detail:"Draft the Change Story — the strategic why behind the integration. Aligns once Cecilia locks the Day-1 Target Operating Model.",
+        voiceover:null },
+    ],
+    readiness:[
+      { label:"Suez Leadership Deck", status:"amber", type:"standard",
+        detail:"7 Suez lessons → concrete leadership actions for Marc. Each slide = one decision required. In progress.",
+        voiceover:"The Suez Leadership Deck translates seven key lessons from the Suez integration into concrete decisions Marc needs to make before Day 1. This is a forward-looking decision brief, not a retrospective." },
+      { label:"Go/No-Go Brief", status:"blue", type:"precondition",
+        detail:"Evidence-based SteerCo brief: CIA completion %, MVEE checklist, Heat Map color, War Room staffed Y/N. GATE: This brief must clear before Day-1 execution is authorized.",
+        voiceover:null },
+    ],
+    exec:[
+      { label:"2× Daily Pulse Checks", status:"amber", type:"standard",
+        detail:"8AM / 4PM stand-ups in Command Center. OCM updates Single Front Door FAQ in real-time based on top 3 ticket types.",
+        voiceover:"During Day 1, two stand-ups daily in the Command Center at 8 AM and 4 PM. Identify the top three emerging issues and update the FAQ in real time. This prevents small problems from becoming rumors." },
+      { label:"Rumor Control Active", status:"blue", type:"standard",
+        detail:"Monitor for 'wait it out' behavior. Deploy manager cascade reinforcement if field resistance spikes.",
+        voiceover:null },
+    ],
+  },
+  training:{
+    target:[
+      { label:"CIA Training Scope Map", status:"green", type:"standard",
+        detail:"Completed. Each CIA entry mapped to modality: self-service QRG, virtual, or in-person. Priority: Google WS (all users), MFA (all users), SAP/Ariba (Finance/Procurement). Matt Baker functioning as Training Coordinator.",
+        voiceover:null },
+    ],
+    mobilize:[
+      { label:"KoP Hub Setup", status:"blue", type:"parallel",
+        detail:"Secure King of Prussia training room for 100+ users. Reserve 50 Chromebooks from TracyAnn bulk order. Hotel conference room as contingency.",
+        voiceover:null },
+      { label:"Google WS Curriculum", status:"blue", type:"parallel",
+        detail:"Coordinate with Heather Summers + 4 external Google Partner trainers. Validate SOW includes Day-1 floor-walking, not just classroom instruction.",
+        voiceover:null },
+      { label:"Day-1 Survival Kit", status:"blue", type:"blocked", depChain:"mvee",
+        detail:"1-page printable: MFA steps, Gmail login, iCare number, QR code. BLOCKED ON: MVEE sign-off. Must work for both digital and non-digital field users.",
+        voiceover:null },
+    ],
+    readiness:[
+      { label:"Login Cheat Sheet (3-pwd)", status:"blue", type:"standard",
+        detail:"3-password confusion guide: Legacy Laptop → Entra ID → Gmail. Incorporated into Day-1 Survival Kit. Must be tested by non-IT users before print.",
+        voiceover:null },
+      { label:"War Room Bootcamp", status:"blue", type:"blocked", depChain:"mvee",
+        detail:"2-hour training for 50 volunteer Champions. Covers MFA flow, Gmail login, iCare escalation path. BLOCKED ON: MVEE sign-off + volunteer recruitment.",
+        voiceover:null },
+    ],
+    exec:[
+      { label:"Live Training at KoP + Sites", status:"green", type:"standard",
+        detail:"Physical presence at King of Prussia confirmed. Matt + Emily + Sophia on-site. Google Partner trainers running virtual tracks simultaneously.",
+        voiceover:null },
+    ],
+  },
+  identity:{
+    target:[
+      { label:"CIA Cyber Capacity", status:"issue", type:"standard",
+        detail:"Validated 2/6 with Taylor Paich: Day-1 is Assessment, not Enforcement. Do NOT strip admin rights Day-1. ACTIVE ISSUE: 25% Cyber workload increase with zero new headcount — present capacity deficit, not a future risk.",
+        voiceover:"Cybersecurity posture for Day 1 validated with Taylor Paich. Confirmed approach: Assessment, not Enforcement. Admin rights will not be stripped on Day 1. However, the Cyber team is absorbing a 25% workload increase with zero new headcount — a real bottleneck risk." },
+    ],
+    mobilize:[
+      { label:"Provisioning Plan (2,500)", status:"blue", type:"precondition",
+        detail:"Define provisioning schedule for CE users into Veolia Okta/Entra ID. Priority: Day-1 critical roles first — Finance leads, Site Managers, IT staff. PRECONDITION for all app training.",
+        voiceover:null },
+      { label:"MFA Enrollment Strategy", status:"blue", type:"standard",
+        detail:"Self-serve vs. IT pre-enroll decision. Manager Password Handover model as zero-IT-literacy fallback.",
+        voiceover:null },
+    ],
+    readiness:[
+      { label:"Merger Phishing Training", status:"blue", type:"standard",
+        detail:"Mandatory pre-close module: M&A-specific phishing threats. Migrates to Riot platform from legacy Enviri tooling.",
+        voiceover:null },
+      { label:"Endpoint Agent Deploy", status:"blue", type:"standard",
+        detail:"Install Veolia EDR agents on CE devices — Assessment only, no policy enforcement yet.",
+        voiceover:null },
+    ],
+    exec:[
+      { label:"Identity Embed in War Room", status:"blue", type:"standard",
+        detail:"Cyber team member embedded in Command Center. Direct line to Cyber if user cannot authenticate.",
+        voiceover:null },
+    ],
+  },
+  workplace:{
+    target:[
+      { label:"🚨 Chromebook Procurement", status:"red", type:"blocked", depChain:"site-list",
+        detail:"100 Chromebook bulk order in progress; 50 ring-fenced for KoP. BLOCKED ON: Validated site list. Cannot finalize distribution until headcounts confirmed per site.",
+        voiceover:"Chromebook procurement is blocked. 100 units on order, 50 reserved for KoP, but distribution planning cannot proceed without the validated site list." },
+      { label:"CIA Workplace: Google Shock", status:"amber", type:"standard",
+        detail:"CE is full Microsoft 365. Google Shock confirmed 2/11. Users get @veolia.com email Day-1. Auto-forwarding from legacy addresses must be validated. Suez lesson: roadshows alone didn't prevent last-minute panic.",
+        voiceover:"Clean Earth is a fully Microsoft 365 organization moving to Google Workspace on Day 1. This is a Google Shock scenario. Every CE employee gets a new Veolia email address. Auto-forwarding must be validated before close." },
+    ],
+    mobilize:[
+      { label:"Mousepad Procurement", status:"blue", type:"blocked", depChain:"site-list",
+        detail:"Printed mousepads with iCare number for every CE user. 30-day lead time. BLOCKED ON: Validated site list for distribution quantities.",
+        voiceover:null },
+      { label:"Self-Service Kiosk Design", status:"blue", type:"handoff",
+        detail:"TracyAnn Neary designing kiosk solution for sites without physical training presence. OCM monitors; Workplace owns delivery.",
+        voiceover:null },
+    ],
+    readiness:[
+      { label:"Device Readiness Test", status:"blue", type:"standard",
+        detail:"Validate Day-1 device experience end-to-end: Chromebook imaging, legacy laptop status, Intune enrollment.",
+        voiceover:null },
+    ],
+    exec:[
+      { label:"Fleet & Kiosks LIVE", status:"green", type:"standard",
+        detail:"Training fleet deployed at KoP and hub sites. All devices tested with Day-1 login flow.",
+        voiceover:null },
+    ],
+  },
+  apps:{
+    target:[
+      { label:"⚠ SAP Day-1 vs. TSA Scope", status:"issue", type:"precondition", depChain:"sap-day1-scope",
+        detail:"ACTIVE ISSUE: Decision not yet made. Window is already compressing — if SAP goes live on Legal Day-1 (April), training window collapses to 8 weeks. Must confirm with Vamsi Dongre immediately. PRECONDITION for all Corporate Apps planning.",
+        voiceover:"SAP scope question has direct training timeline implications. If SAP goes live on Legal Day 1 in April, the training window collapses from six months to eight weeks. We cannot finalize the Corporate Apps training plan until this decision is made." },
+      { label:"App Owner Outreach", status:"blue", type:"standard",
+        detail:"Emails sent to Vamsi Dongre, Cindy Solomon, Stephanie Grubis, Brett and Karen, and Jeff.",
+        voiceover:null },
+      { label:"🚨 Analytical Structure Gap", status:"red", type:"precondition", depChain:"analytical-structure",
+        detail:"CRITICAL: Company codes, cost centers, profit centers, WBSEs must be built in SAP before ANY downstream activity. Gap confirmed by Ann Ferrizzi 2/13: not visible in any Smartsheet finance workstream task. Ownership unassigned. BLOCKS: DOAs, system access, all Ariba/Concur training.",
+        voiceover:"This is the most overlooked critical dependency in the integration. Ann Ferrizzi confirmed on February 13th that the SAP analytical structure — company codes, cost centers, profit centers — is not assigned to any owner and does not appear in any Smartsheet task. Without this, no downstream finance or procurement activity can proceed." },
+    ],
+    mobilize:[
+      { label:"Ariba/Concur Trainer Kickoff", status:"blue", type:"blocked", depChain:"ce-user-lists",
+        detail:"Kickoff in progress. BLOCKED ON: CE user list (requesters, approvers, DOA holders unknown). Cindy Solomon + Ann Ferrizzi leading. Roadshow model recommended for 90+ sites — on-site preferred over remote-only per Ann's lessons learned.",
+        voiceover:null },
+      { label:"Workday Ownership Confirm", status:"issue", type:"precondition", depChain:"workday-ownership",
+        detail:"ACTIVE ISSUE: Email sent to Cecilia with EOW deadline — no written confirmation received. HR ownership of Workday training (content, logistics, delivery) is unresolved. If not confirmed, DB&T budget must include Workday training placeholder immediately.",
+        voiceover:"Waiting on written confirmation from Cecilia that HR owns Workday training end to end. Until confirmed, there is a budget and accountability gap." },
+    ],
+    readiness:[
+      { label:"SAP Role Mapping (Day-2+)", status:"gray", type:"blocked", depChain:"analytical-structure",
+        detail:"Map CE finance/procurement roles to Veolia SAP T-Codes. BLOCKED ON: Analytical structure completion. Cannot train until role mapping complete.",
+        voiceover:null },
+      { label:"Concur Mobile Guide", status:"gray", type:"standard",
+        detail:"Self-service QRG for Concur mobile app setup. Cindy Solomon owns Concur end-to-end.",
+        voiceover:null },
+    ],
+    exec:[
+      { label:"Day-1 App Access Live", status:"gray", type:"handoff",
+        detail:"Confirm Concur, Ariba view-only, and Day-1 corporate app access provisioned before 8AM Day-1. Owned by app teams; OCM confirms via MVEE checklist.",
+        voiceover:null },
+    ],
+  },
+  infra:{
+    target:[
+      { label:"CIA Infra: No Day-1 Impacts", status:"green", type:"standard",
+        detail:"Validated 2/18 with Elena Navarette. No infrastructure changes are Day-1 critical for CE users. VPN, SD-WAN, file server all TSA-window activities. Oracle ERP surfaced as cross-stream item.",
+        voiceover:null },
+    ],
+    mobilize:[
+      { label:"⚠ Tech Liaison Appointment", status:"amber", type:"handoff",
+        detail:"Suez lesson: dedicated Infrastructure/Security liaison to partner with CE IT lead through TSA. Not something OCM can own — must be assigned by technical leadership. Currently unassigned.",
+        voiceover:"One of the clearest lessons from Suez is that the absence of a dedicated technical liaison created significant friction. A named Infrastructure and Security liaison must be assigned by technical leadership. Currently unassigned." },
+      { label:"Network Bridge Validation", status:"blue", type:"standard",
+        detail:"Confirm CE-Veolia network connectivity. FoxPro and 4D legacy apps must remain accessible during TSA.",
+        voiceover:null },
+    ],
+    readiness:[
+      { label:"Remote Access Testing", status:"blue", type:"standard",
+        detail:"End-to-end test: CE user, legacy laptop, new Veolia VPN. Identify sites requiring manual intervention.",
+        voiceover:null },
+    ],
+    exec:[
+      { label:"Network Bridge LIVE", status:"green", type:"standard",
+        detail:"CE-Veolia bridge active. Legacy applications accessible via new Veolia credentials.",
+        voiceover:null },
+    ],
+  },
+  support:{
+    target:[
+      { label:"🚨 Validated Site List", status:"red", type:"blocked", depChain:"site-list",
+        detail:"CRITICAL BLOCKER: No validated site list with headcounts. Blocks: mousepad ordering, Welcome Committee targeting, Heat Zone tiering, War Room routing. Must come from Deloitte / Marine Reulier.",
+        voiceover:"The validated site list is the single most consequential open dependency in the entire Day 1 plan. Without it, four separate workstreams are blocked: mousepad procurement, Welcome Committee deployment, Heat Zone tiering, and War Room routing." },
+      { label:"Ed Cacho Meeting (iCare)", status:"issue", type:"standard",
+        detail:"Define: persistent Google Meet bridge structure, IVR dedicated CE queue, rapid pulse every 2hrs. ACTIVE ISSUE: iCare is currently -40% staffed — this is a present deficit. Day-1 load must be actively managed to avoid service desk collapse.",
+        voiceover:"Three decisions outstanding with Ed Cacho: the Google Meet bridge structure, the dedicated CE IVR queue, and the 2-hour pulse cadence. iCare is running at 60% normal capacity — Day 1 load must be carefully managed." },
+    ],
+    mobilize:[
+      { label:"Recruit Volunteer Army (50)", status:"blue", type:"blocked", depChain:"site-list",
+        detail:"Recruit Google Champions to staff Day-1 Virtual Bridge. 2-hour Bootcamp required. BLOCKED ON: Validated site list for geographic routing assignments.",
+        voiceover:null },
+      { label:"Single Front Door Portal", status:"blue", type:"blocked", depChain:"mvee",
+        detail:"Stand up dedicated URL: MFA Setup, Gmail Access, Get Help, FAQ. BLOCKED ON: MVEE sign-off to confirm content scope.",
+        voiceover:null },
+    ],
+    readiness:[
+      { label:"IVR Configuration", status:"blue", type:"blocked", depChain:"mvee",
+        detail:"Configure iCare IVR: dedicated Clean Earth Day-1 option. BLOCKED ON: MVEE definition to confirm routing logic.",
+        voiceover:null },
+      { label:"Heat Zone Tiering (88 sites)", status:"blue", type:"blocked", depChain:"site-list",
+        detail:"T1 (50+ staff): Welcome Committee. T2 (10–50): Manager Box. T3 (<10): Digital + wallet cards. BLOCKED ON: Validated site list.",
+        voiceover:null },
+    ],
+    exec:[
+      { label:"⚡ Command Center 48hr Live", status:"amber", type:"standard",
+        detail:"Persistent Google Meet bridge, 48 continuous hours. 50 volunteers + Cyber embed + OCM Lead. Escalation: L0 Portal → L1 Bridge → L2 iCare → L3 WS Lead. Pulse every 2hrs.",
+        voiceover:"The Command Center runs as a persistent Google Meet bridge for 48 continuous hours from close. 50 volunteer Power Users embedded with the Cyber team rep and OCM lead. Escalation runs from the self-service portal at Level 0 through the bridge at Level 1, to iCare at Level 2, to the workstream lead at Level 3." },
+    ],
+  },
+  hr:{
+    target:[
+      { label:"Workday Ownership Pending", status:"amber", type:"precondition", depChain:"workday-ownership",
+        detail:"Email sent to Cecilia: HR owns Workday content, logistics, and delivery. Awaiting written confirmation. If not received by EOW, DB&T budget must include placeholder.",
+        voiceover:"HR ownership of the Workday training program is pending written confirmation. If not received by end of week, the DB&T budget will need a placeholder to avoid a coverage gap." },
+      { label:"Critical Talent Retention", status:"blue", type:"handoff",
+        detail:"FoxPro and 4D SMEs are flight risks per Due Diligence. OCM feeds specific IT names to Cecilia's retention list. HR owns retention packages.",
+        voiceover:null },
+    ],
+    mobilize:[
+      { label:"Day-1 Org Chart Lock", status:"blue", type:"precondition",
+        detail:"Cecilia owns the Day-1 Target Operating Model. OCM needs this locked to build the Change Story. PRECONDITION for manager cascade content.",
+        voiceover:null },
+      { label:"Welcome Packet (HR + IT)", status:"blue", type:"parallel",
+        detail:"OCM requests insertion of Day-1 Digital Essentials 1-pager into HR Welcome Packet.",
+        voiceover:null },
+    ],
+    readiness:[
+      { label:"Manager Script Delivery", status:"blue", type:"parallel",
+        detail:"HR and OCM co-deliver 'This is Permanent' script to site managers 1 week before close.",
+        voiceover:null },
+    ],
+    exec:[
+      { label:"HR Support Active", status:"green", type:"handoff",
+        detail:"Bill Agostini and Lauren deployed in parallel with IT Command Center. OCM monitors; HR owns.",
+        voiceover:null },
+    ],
+  },
+};
 
-  if(ext==="pdf" || mime==="application/pdf"){
-    try{
-      pdfjsLib.GlobalWorkerOptions.workerSrc =
-        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js";
-    }catch(_){}
-    const buf = await file.arrayBuffer();
-    const doc = await pdfjsLib.getDocument({data: buf}).promise;
+// ── Task Data TSA ─────────────────────────────────────────────────────────────
+const TASKS_TSA = {
+  ocm:{
+    stabilize:[{ label:"Hypercare Dashboard", status:"amber", type:"standard",
+      detail:"Live readiness dashboard: ticket volume, adoption %, open RAID items. Updated daily during Hypercare.",
+      voiceover:"The Hypercare Dashboard is the primary situational awareness tool for the 30 days post Day 1. Tracks ticket volume, adoption percentages, and open RAID items daily." }],
+    enable:[
+      { label:"TSA Exit Change Story", status:"blue", type:"standard", detail:"Narrative: why SAP and Workday adoption matters for TSA Exit.", voiceover:null },
+      { label:"Culture Integration Pulse", status:"blue", type:"standard", detail:"5-question pulse survey at Month 2.", voiceover:null },
+    ],
+    migrate:[{ label:"Cutover Comms Package", status:"blue", type:"standard", detail:"What changes, when, who to call. Distributed 2 weeks before SAP cutover.", voiceover:null }],
+    exit:[{ label:"BAU Handoff + Close-Out", status:"green", type:"standard", detail:"OCM formally hands off to operational management. Lessons learned documented.", voiceover:null }],
+  },
+  training:{
+    stabilize:[
+      { label:"Google WS Phase 2", status:"amber", type:"standard",
+        detail:"Advanced Google Workspace: Drive collaboration, Meet, Calendar sharing.",
+        voiceover:"Google Workspace Phase 2 builds on Day 1 survival training to develop genuine proficiency. Focus shifts from basic login to collaborative features: shared Drive, Meet, Calendar integration." },
+      { label:"Competency Baseline Survey", status:"blue", type:"standard", detail:"Measure post-Day-1 proficiency by user segment.", voiceover:null },
+    ],
+    enable:[
+      { label:"SAP Power User Bootcamp", status:"blue", type:"blocked", depChain:"analytical-structure",
+        detail:"Role-based SAP training. BLOCKED ON: Analytical structure completion + SAP role mapping + sandbox with CE data. Cindy Solomon's train-the-trainer model recommended for scale.",
+        voiceover:null },
+      { label:"Ariba Roadshow (On-Site)", status:"blue", type:"blocked", depChain:"ce-user-lists",
+        detail:"Ann Ferrizzi lesson learned: remote-only = repeat training cycles. Recommendation: regional hotel sessions, 30–50 users, hands-on live PO entry. BLOCKED ON: CE user list + DOA structure.",
+        voiceover:null },
+      { label:"TSA Training Roadmap", status:"blue", type:"blocked", depChain:"workday-ownership",
+        detail:"Full training calendar for Month 2–6. BLOCKED ON: Workday ownership confirmation + SAP scope decision.",
+        voiceover:null },
+    ],
+    migrate:[
+      { label:"CE Ops App Training (CORE/ORBIT)", status:"amber", type:"precondition",
+        detail:"CRITICAL RISK (Ken Higgins 2/13): Veolia teams must be trained on CE operational platforms CORE and ORBIT. CE may lack training documentation. Dependency on CE's training capacity — not yet assessed.",
+        voiceover:"This is the inverse training risk. Ken Higgins flagged that Veolia's teams need to learn Clean Earth's operational applications — CORE and ORBIT. We are dependent on Clean Earth having adequate training documentation and capacity. This has not yet been assessed and represents a significant unknown." },
+      { label:"Dataserv User Onboarding", status:"blue", type:"blocked", depChain:"ce-user-lists",
+        detail:"Joaquin + Jason (AP supervisor) own Dataserv training. Materials refreshed from recent acquisitions. BLOCKED ON: CE invoice reviewer and approver list + DOA limits from Grant Thornton.",
+        voiceover:null },
+    ],
+    exit:[{ label:"Training ROI Assessment", status:"green", type:"standard", detail:"Measure training effectiveness vs. ticket volume reduction and SAP adoption rate.", voiceover:null }],
+  },
+  identity:{
+    stabilize:[{ label:"Legacy System Inventory", status:"blue", type:"standard", detail:"Full inventory of FoxPro and 4D systems. Map to SME owners.", voiceover:null }],
+    enable:[
+      { label:"FoxPro/4D Knowledge Transfer", status:"blue", type:"precondition", detail:"Structured KT sessions with CE legacy SMEs before role transitions. PRECONDITION for legacy decommission.", voiceover:null },
+      { label:"Azure/AWS Architecture Align", status:"blue", type:"handoff", detail:"Backend infrastructure alignment with Len De La Cruz. EA owns; OCM monitors for user impact.", voiceover:null },
+    ],
+    migrate:[{ label:"Legacy Decommission Planning", status:"blue", type:"standard", detail:"Define sunset timeline for CE legacy infrastructure.", voiceover:null }],
+    exit:[{ label:"Infra on Veolia Stack ✓", status:"green", type:"standard", detail:"All CE infrastructure migrated to Veolia standard environments.", voiceover:null }],
+  },
+  workplace:{
+    stabilize:[{ label:"VPN Migration (AnyConnect→Netskope)", status:"blue", type:"standard", detail:"CE remote workers migrate to Veolia standard VPN/ZTNA. Offshore resources included. Elena Navarette leading.", voiceover:null }],
+    enable:[
+      { label:"140TB File Server Carve-Out", status:"blue", type:"precondition", detail:"Migrate CE files from shared Enviri/CE on-prem server. PII review required. Compliance implications. Elena Navarette: placeholder in CIA — details TBD post-discovery.", voiceover:null },
+      { label:"SD-WAN Migration Planning", status:"issue", type:"standard", detail:"ACTIVE ISSUE: Ed/Marc want all 88 sites migrated within TSA window — Elena's team is pushing back on feasibility. Active scope conflict not yet resolved. Jasprit's existing process must scale to CE sites; timeline negotiation ongoing.", voiceover:null },
+    ],
+    migrate:[{ label:"Meraki Phase-Out Comms", status:"blue", type:"standard", detail:"Notify CE IT/network staff of dashboard transition to Veolia NOC tools.", voiceover:null }],
+    exit:[{ label:"Workplace on Veolia Stack ✓", status:"green", type:"standard", detail:"All CE workplace and connectivity infrastructure on Veolia standard.", voiceover:null }],
+  },
+  apps:{
+    stabilize:[
+      { label:"Salesforce: Current vs. New Org", status:"amber", type:"precondition", depChain:"salesforce-new-org",
+        detail:"CE has 3 Salesforce orgs of unknown maturity. New Org targeting May 1 — already at risk. Front-end (CRM users) and back-end (CE Salesforce team) are distinct training populations. Ken Higgins / Jamie McCann own.",
+        voiceover:null },
+    ],
+    enable:[
+      { label:"CE Salesforce Team Onboarding", status:"blue", type:"blocked", depChain:"salesforce-new-org",
+        detail:"Hub-and-spoke model: train CE's Salesforce team on Veolia's org config → they cascade to their users. BLOCKED ON: New Org completion. Keiko (new product owner) is a training asset.",
+        voiceover:null },
+      { label:"Oracle ERP Wind-Down Comms", status:"blue", type:"standard", detail:"CE currently on Oracle EBS (OCI shared with Enviri). Migration to Veolia target ERP required. Finance, billing, AR/AP impacted. Dual-reporting period expected.", voiceover:null },
+    ],
+    migrate:[
+      { label:"⚠ Month-End Close in SAP", status:"amber", type:"precondition",
+        detail:"First month-end close in SAP is the highest-risk event. Claude Scher flagged as critical failure point. Pre-simulation with CE data is mandatory before go-live.",
+        voiceover:"The first month-end close in SAP is the single highest-risk event in the Corporate Applications workstream. A full pre-simulation using CE data is mandatory before the go-live date." },
+      { label:"Cutover Freeze Comms", status:"blue", type:"standard", detail:"Communicate blackout period before SAP go-live.", voiceover:null },
+    ],
+    exit:[{ label:"SAP Go-Live + TSA Exit ✓", status:"green", type:"standard", detail:"CE Finance fully transacting in SAP S/4HANA.", voiceover:null }],
+  },
+  infra:{
+    stabilize:[{ label:"Legacy App Connectivity Audit", status:"blue", type:"standard", detail:"Confirm FoxPro/4D accessible via new Veolia credentials. Validate no TSA gaps.", voiceover:null }],
+    enable:[
+      { label:"FoxPro/4D SME KT Sessions", status:"blue", type:"precondition", detail:"Structured knowledge transfer before SME role transitions. Flight risk population per Due Diligence.", voiceover:null },
+    ],
+    migrate:[{ label:"Legacy Decommission Schedule", status:"blue", type:"standard", detail:"Define sunset dates for FoxPro, 4D, and CE legacy infrastructure per IT Contracts / Robert Litwa.", voiceover:null }],
+    exit:[{ label:"Infra Fully on Veolia Stack ✓", status:"green", type:"standard", detail:"All CE infrastructure migrated.", voiceover:null }],
+  },
+  support:{
+    stabilize:[{ label:"Hypercare Period (30 days)", status:"amber", type:"standard",
+      detail:"Extended support posture: Command Center scales from 48hr to business hours. Ticket volume monitored daily. FAQ updated in real time.",
+      voiceover:"Hypercare extends elevated support for 30 days post Day 1. The Command Center scales back to business hours but monitoring intensity remains high." }],
+    enable:[
+      { label:"Transition to Standard iCare", status:"blue", type:"handoff", detail:"CE users fully routed to standard iCare processes. Ed Cacho owns; OCM monitors adoption.", voiceover:null },
+      { label:"Ticket Trend Analysis", status:"blue", type:"standard", detail:"OCM reviews ticket categories to identify persistent training gaps.", voiceover:null },
+    ],
+    migrate:[{ label:"FAQ Portal TSA Phase Update", status:"blue", type:"standard", detail:"Single Front Door updated with TSA-phase content.", voiceover:null }],
+    exit:[{ label:"CE Support Fully BAU ✓", status:"green", type:"standard", detail:"CE employees indistinguishable from Veolia BAU users in iCare.", voiceover:null }],
+  },
+  hr:{
+    stabilize:[{ label:"Post-D1 Org Comms", status:"blue", type:"handoff", detail:"HR communicates org structure changes post-close. OCM monitors for confusion signals.", voiceover:null }],
+    enable:[
+      { label:"Role Harmonization", status:"blue", type:"handoff", detail:"CE job titles and grades mapped to Veolia equivalents. HR owns; OCM monitors for resistance signals.", voiceover:null },
+      { label:"Culture Integration Survey", status:"blue", type:"standard", detail:"Month 3 pulse: belonging, clarity of expectations, confidence in tools.", voiceover:null },
+      { label:"Workday: tHRive Curriculum", status:"blue", type:"blocked", depChain:"workday-ownership",
+        detail:"HR-owned Workday training curriculum. BLOCKED ON: Cecilia confirmation of ownership. If not confirmed, placeholder in DB&T budget required.", voiceover:null },
+    ],
+    migrate:[{ label:"Performance Cycle Alignment", status:"blue", type:"standard", detail:"CE employees onboarded to Veolia performance management cycle in Workday.", voiceover:null }],
+    exit:[{ label:"HR Processes on Workday ✓", status:"green", type:"standard", detail:"All CE HR processes fully operational in Workday.", voiceover:null }],
+  },
+};
 
-    let out = "";
-    const pagesToRead = Math.min(2, doc.numPages);
-    for(let p=1; p<=pagesToRead; p++){
-      const page = await doc.getPage(p);
-      const content = await page.getTextContent();
-      const strings = content.items.map(it => it.str).filter(Boolean);
-      out += strings.join(" ") + "\n";
-      if(out.length >= MAX) break;
-    }
-    return out.slice(0, MAX).trim();
-  }
+// ── Legend Modal ──────────────────────────────────────────────────────────────
+function LegendModal({ onClose, playClick }) {
+  return (
+    <div style={{ position:"fixed", inset:0, zIndex:1000, background:"rgba(15,23,42,0.45)", display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}
+      onClick={e => { if (e.target === e.currentTarget) { playClick(); onClose(); } }}>
+      <div style={{ background:"#ffffff", border:"1px solid #e2e8f0", borderRadius:12, maxWidth:720, width:"100%", maxHeight:"85vh", overflowY:"auto", padding:32, boxShadow:"0 20px 60px rgba(0,0,0,0.15)" }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
+          <div style={{ fontSize:18, fontWeight:700, color:"#1e293b", fontFamily:"'IBM Plex Mono',monospace" }}>How to Use This Map</div>
+          <button onClick={() => { playClick(); onClose(); }} style={{ background:"#f1f5f9", border:"1px solid #e2e8f0", borderRadius:6, color:"#64748b", padding:"4px 12px", cursor:"pointer", fontSize:12 }}>Close ✕</button>
+        </div>
 
-  if(ext==="docx" || mime==="application/vnd.openxmlformats-officedocument.wordprocessingml.document"){
-    const buf = await file.arrayBuffer();
-    const res = await mammoth.extractRawText({arrayBuffer: buf});
-    const txt = (res?.value || "").replace(/\s+\n/g,"\n").trim();
-    return txt.slice(0, MAX);
-  }
-
-  const text = await file.text();
-  return String(text || "").slice(0, MAX).trim();
-}
-
-/* ===== Steps UI ===== */
-function Steps({current}){
-  const steps=["Project Info","Tiering","Configure","Build Map"];
-  return(
-    <div style={{display:"flex",alignItems:"center",marginBottom:28}}>
-      {steps.map((s,i)=>{
-        const done=i<current, active=i===current;
-        return(
-          <React.Fragment key={i}>
-            <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6}}>
-              <div style={{
-                width:34,height:34,borderRadius:"50%",
-                display:"flex",alignItems:"center",justifyContent:"center",
-                fontSize:13,fontWeight:900,
-                background:done?"#059669":active?"#2563eb":"#fff",
-                border:`2px solid ${done?"#059669":active?"#2563eb":"#e2e8f0"}`,
-                color:(done||active)?"#fff":"#94a3b8"
-              }}>{done?"✓":i+1}</div>
-              <div style={{fontSize:13,fontWeight:active?900:700,color:active?"#2563eb":done?"#059669":"#94a3b8",whiteSpace:"nowrap"}}>
-                {s}
-              </div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+          {/* Purpose */}
+          <div style={{ gridColumn:"1/-1", background:"rgba(99,102,241,0.05)", border:"1px solid rgba(99,102,241,0.18)", borderRadius:8, padding:16 }}>
+            <div style={{ fontSize:11, fontWeight:700, color:"#6366f1", marginBottom:8, fontFamily:"'IBM Plex Mono',monospace", letterSpacing:"0.08em" }}>PURPOSE</div>
+            <div style={{ fontSize:13, color:"#475569", lineHeight:1.7 }}>
+              This map visualizes readiness status, dependency chains, and sequencing requirements for the Project Liberty (Clean Earth) integration. It serves three audiences: <strong style={{color:"#1e293b"}}>IMO / Bain</strong> (program-level risk visibility), <strong style={{color:"#1e293b"}}>Workstream Leads</strong> (dependency awareness and sequencing), and <strong style={{color:"#1e293b"}}>OCM Team</strong> (task tracking and escalation triggers).
             </div>
-            {i<steps.length-1 && (
-              <div style={{flex:1,height:2,margin:"0 10px",marginBottom:22,background:done?"#059669":"#e2e8f0"}}/>
+          </div>
+
+          {/* Views */}
+          <div style={{ background:"#f8fafc", border:"1px solid #e2e8f0", borderRadius:8, padding:16 }}>
+            <div style={{ fontSize:11, fontWeight:700, color:"#64748b", marginBottom:10, fontFamily:"'IBM Plex Mono',monospace", letterSpacing:"0.08em" }}>TWO VIEWS</div>
+            {[
+              { label:"⚡ Day-1 Readiness", sub:"Now → May 1, 2026", desc:"Four phases: Targeting, Mobilization, Readiness, Day-1. Focus on MVEE and business continuity." },
+              { label:"📋 TSA Exit Plan", sub:"May → October 2026", desc:"Stabilize, Enable, Migrate, TSA Exit. Focus on competency transfer and synergy realization." },
+            ].map(v => (
+              <div key={v.label} style={{ marginBottom:10, paddingBottom:10, borderBottom:"1px solid #f1f5f9" }}>
+                <div style={{ fontSize:12, fontWeight:600, color:"#1e293b" }}>{v.label} <span style={{ fontSize:11, color:"#94a3b8" }}>— {v.sub}</span></div>
+                <div style={{ fontSize:11, color:"#64748b", marginTop:3 }}>{v.desc}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Status */}
+          <div style={{ background:"#f8fafc", border:"1px solid #e2e8f0", borderRadius:8, padding:16 }}>
+            <div style={{ fontSize:11, fontWeight:700, color:"#64748b", marginBottom:10, fontFamily:"'IBM Plex Mono',monospace", letterSpacing:"0.08em" }}>STATUS COLORS</div>
+            {Object.entries(STATUS).map(([k,v]) => (
+              <div key={k} style={{ display:"flex", alignItems:"flex-start", gap:9, marginBottom:7 }}>
+                <div style={{ width:9, height:9, borderRadius:2, background:v.dot, flexShrink:0, marginTop:3 }}/>
+                <div>
+                  <span style={{ fontSize:12, color:v.text, fontWeight:700 }}>{v.label}</span>
+                  <span style={{ fontSize:11, color:"#94a3b8", marginLeft:6 }}>
+                    {k==="red"?"Immediate action required":k==="issue"?"Problem currently occurring":k==="amber"?"Risk of failure — monitor":k==="green"?"Proceeding as planned":k==="blue"?"Scheduled, not yet started":"Deferred / low priority"}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Task types */}
+          <div style={{ gridColumn:"1/-1", background:"#f8fafc", border:"1px solid #e2e8f0", borderRadius:8, padding:16 }}>
+            <div style={{ fontSize:11, fontWeight:700, color:"#64748b", marginBottom:10, fontFamily:"'IBM Plex Mono',monospace", letterSpacing:"0.08em" }}>TASK TYPE INDICATORS</div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+              {Object.entries(TASK_TYPES).filter(([k]) => k !== "standard").map(([k,v]) => (
+                <div key={k} style={{ display:"flex", alignItems:"flex-start", gap:9 }}>
+                  <span style={{ fontSize:13, flexShrink:0, marginTop:1 }}>{v.icon}</span>
+                  <div>
+                    <span style={{ fontSize:12, color:v.color, fontWeight:700 }}>{v.label}</span>
+                    <div style={{ fontSize:11, color:"#94a3b8", marginTop:2 }}>{v.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Phase gates */}
+          <div style={{ background:"#f8fafc", border:"1px solid #e2e8f0", borderRadius:8, padding:16 }}>
+            <div style={{ fontSize:11, fontWeight:700, color:"#64748b", marginBottom:8, fontFamily:"'IBM Plex Mono',monospace", letterSpacing:"0.08em" }}>PHASE GATE ARROWS ›</div>
+            <div style={{ fontSize:12, color:"#64748b", lineHeight:1.7 }}>The <strong style={{color:"#1e293b"}}>›</strong> circle between phase columns is a <strong style={{color:"#1e293b"}}>gate condition</strong> — hover it to read what must be true before the next phase begins.</div>
+          </div>
+
+          {/* Dependencies */}
+          <div style={{ background:"#f8fafc", border:"1px solid #e2e8f0", borderRadius:8, padding:16 }}>
+            <div style={{ fontSize:11, fontWeight:700, color:"#64748b", marginBottom:8, fontFamily:"'IBM Plex Mono',monospace", letterSpacing:"0.08em" }}>DEPENDENCIES PANEL</div>
+            <div style={{ fontSize:12, color:"#64748b", lineHeight:1.7 }}>Click the <strong style={{color:"#1e293b"}}>Dependencies</strong> sidebar tab to see all active dependency chains. Click a chain to highlight its affected tasks across the grid in indigo.</div>
+          </div>
+
+          {/* Interactions */}
+          <div style={{ gridColumn:"1/-1", background:"#f8fafc", border:"1px solid #e2e8f0", borderRadius:8, padding:16 }}>
+            <div style={{ fontSize:11, fontWeight:700, color:"#64748b", marginBottom:10, fontFamily:"'IBM Plex Mono',monospace", letterSpacing:"0.08em" }}>INTERACTIONS</div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10 }}>
+              {[
+                { action:"Click a task",       result:"Opens detail drawer with full context and escalation notes" },
+                { action:"Click a lane name",   result:"Focuses that lane — dims all others for single-workstream view" },
+                { action:"Click a dep chain",   result:"Highlights all tasks blocked by that dependency in indigo" },
+                { action:"🔊 Play voiceover",   result:"Plays an executive audio briefing for that task" },
+                { action:"Show All ✕",          result:"Clears any active lane focus or dependency highlight" },
+                { action:"Toggle D1 / TSA",     result:"Switches between Day-1 Readiness and TSA Exit views" },
+              ].map(i => (
+                <div key={i.action} style={{ fontSize:11, color:"#64748b" }}>
+                  <div style={{ color:"#1e293b", fontWeight:600, marginBottom:2 }}>{i.action}</div>
+                  {i.result}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Dep Chain Panel ───────────────────────────────────────────────────────────
+function DepPanel({ activeDep, setActiveDep, playClick }) {
+  return (
+    <div style={{ padding:"0 14px 14px" }}>
+      <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"#94a3b8", marginBottom:8 }}>Active Dependency Chains</div>
+      {DEPENDENCY_CHAINS.map(d => {
+        const isActive = activeDep === d.id;
+        const urgColor = d.urgency === "red" ? "#dc2626" : "#ea580c";
+        return (
+          <div key={d.id}
+            onClick={() => { setActiveDep(isActive ? null : d.id); playClick(); }}
+            style={{
+              marginBottom:6, borderRadius:6, padding:"8px 10px", cursor:"pointer",
+              background: isActive ? (d.urgency==="red" ? "rgba(220,38,38,0.05)" : "rgba(234,88,12,0.05)") : "#f8fafc",
+              border:`1px solid ${isActive ? urgColor+"40" : "#e2e8f0"}`,
+              transition:"all 0.15s",
+            }}>
+            <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:3 }}>
+              <div style={{ width:6, height:6, borderRadius:"50%", background:urgColor, flexShrink:0 }}/>
+              <div style={{ fontSize:11, fontWeight:700, color: isActive ? urgColor : "#334155", lineHeight:1.3 }}>{d.title}</div>
+            </div>
+            <div style={{ fontSize:10, color:"#94a3b8", lineHeight:1.4, marginBottom:isActive?6:0 }}>{d.blocks.length} task{d.blocks.length>1?"s":""} blocked</div>
+            {isActive && (
+              <div>
+                <div style={{ fontSize:10, color:"#64748b", lineHeight:1.5, marginBottom:6, paddingTop:6, borderTop:"1px solid #e2e8f0" }}>{d.blocker}</div>
+                <div style={{ fontSize:9, color:"#94a3b8", fontWeight:700, marginBottom:3, fontFamily:"'IBM Plex Mono',monospace" }}>OWNER: {d.owner}</div>
+                <div style={{ fontSize:9, color:"#94a3b8", fontWeight:700, marginBottom:4, fontFamily:"'IBM Plex Mono',monospace" }}>BLOCKS:</div>
+                {d.blocks.map((b,i) => (
+                  <div key={i} style={{ fontSize:10, color:"#64748b", paddingLeft:8, borderLeft:"2px solid #e2e8f0", marginBottom:2 }}>
+                    {b.label}
+                  </div>
+                ))}
+              </div>
             )}
-          </React.Fragment>
+          </div>
         );
       })}
     </div>
   );
 }
 
-/* ===== Stage 1 ===== */
-function Stage1({onNext}){
-  const [f,setF]=useState({name:"",owner:"",date:"",description:""});
-  const [inputMode,setInputMode]=useState("text");
-  const [uploadedFileName,setUploadedFileName]=useState("");
-  const [uploadBusy,setUploadBusy]=useState(false);
-  const [uploadErr,setUploadErr]=useState(null);
+// ── App ───────────────────────────────────────────────────────────────────────
+function App() {
+  const [view, setView]           = useState("d1");
+  const [selected, setSelected]   = useState(null);
+  const [focusLane, setFocusLane] = useState(null);
+  const [activeDep, setActiveDep] = useState(null);
+  const [audioOn, setAudioOn]     = useState(true);
+  const [sideTab, setSideTab]     = useState("lanes"); // "lanes" | "deps"
+  const [showLegend, setShowLegend] = useState(false);
+  const { playHover, playClick }  = useAudio(audioOn);
+  const { speak, stop, speaking } = useSpeech(audioOn);
 
-  const ok = f.name.trim() && f.description.trim();
-  const set = k => e => setF(p=>({...p,[k]:e.target.value}));
+  const phases = view === "d1" ? PHASES_D1 : PHASES_TSA;
+  const tasks  = view === "d1" ? TASKS_D1  : TASKS_TSA;
 
-  const handleFile = async (e)=>{
-    const file=e.target.files?.[0];
-    if(!file) return;
-    setUploadedFileName(file.name);
-    setUploadErr(null);
-    setUploadBusy(true);
-    try{
-      const extracted = await extractTextFromFile(file);
-      setF(p=>({...p,description: extracted || p.description}));
-    }catch(err){
-      setUploadErr(`Could not read file: ${err?.message || "Unknown error"}.`);
-    }finally{
-      setUploadBusy(false);
-      e.target.value="";
+  // Count criticals
+  const criticalCount = LANES.reduce((acc, lane) =>
+    acc + Object.values(tasks[lane.id] || {}).flat().filter(t => t.status === "red").length, 0);
+
+  // Determine if a task is highlighted by dep chain
+  const isDepHighlighted = (laneId, taskLabel) => {
+    if (!activeDep) return false;
+    const chain = DEPENDENCY_CHAINS.find(d => d.id === activeDep);
+    if (!chain) return false;
+    return chain.blocks.some(b => b.lane === laneId && b.label === taskLabel);
+  };
+
+  const handleSelectTask = (taskObj, lane, phase, idx) => {
+    playClick();
+    const isSel = selected && selected.lane === lane && selected.phase === phase && selected.idx === idx;
+    if (isSel) { setSelected(null); stop(); }
+    else {
+      setSelected({ lane, phase, idx, task: taskObj });
+      if (taskObj.voiceover) speak(taskObj.voiceover);
+      else stop();
     }
   };
 
-  return(
-    <div className="fade-up">
-      <h2 style={{fontFamily:"var(--serif)",fontSize:28,marginBottom:6}}>Tell us about your initiative</h2>
-      <p style={{fontSize:15,color:"var(--slate)",marginBottom:22,lineHeight:1.6}}>
-        This anchors the readiness map and informs AI-generated content.
-      </p>
+  const T = {
+    bg:"#f1f5f9", bgSidebar:"#ffffff", bgHeader:"#ffffff",
+    bgGrid:"#ffffff", bgPhaseHdr:"#f8fafc", border:"#e2e8f0",
+    text:"#1e293b", textMuted:"#64748b", textFaint:"#cbd5e1",
+    rowAlt:"#f8fafc", laneLabel:"#f8fafc",
+  };
 
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
-        <div>
-          <label className="lbl">Initiative / Project Name *</label>
-          <input className="inp" placeholder="e.g. Project Awesome Sauce" value={f.name} onChange={set("name")} />
+  return (
+    <div style={{ fontFamily:"'IBM Plex Sans',system-ui,sans-serif", background:T.bg, minHeight:"100vh", color:T.text }}>
+
+      {showLegend && <LegendModal onClose={() => setShowLegend(false)} playClick={playClick} />}
+
+      {/* ── Header ── */}
+      <div style={{
+        position:"sticky", top:0, zIndex:100,
+        background:"#ffffff", borderBottom:`1px solid #e2e8f0`,
+        boxShadow:"0 1px 4px rgba(0,0,0,0.06)",
+        display:"flex", alignItems:"center", justifyContent:"space-between",
+        padding:"0 20px", height:56,
+      }}>
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          <div style={{
+            width:32, height:32, borderRadius:7,
+            background:"linear-gradient(135deg,#7c3aed,#2563eb)",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            fontSize:11, fontWeight:700, color:"white", fontFamily:"'IBM Plex Mono',monospace",
+            letterSpacing:"0.05em",
+          }}>PL</div>
+          <div>
+            <div style={{ fontSize:13, fontWeight:700, color:"#1e293b", fontFamily:"'IBM Plex Mono',monospace", letterSpacing:"0.04em" }}>Project Liberty — Readiness Map</div>
+            <div style={{ fontSize:10, color:"#94a3b8", fontFamily:"'IBM Plex Mono',monospace" }}>Veolia / Clean Earth · DB&T OCM · v3.1</div>
+          </div>
         </div>
-        <div>
-          <label className="lbl">OCM Lead / Owner</label>
-          <input className="inp" placeholder="e.g. John Doe" value={f.owner} onChange={set("owner")} />
-        </div>
-        <div>
-          <label className="lbl">Target Go-Live Date</label>
-          <input className="inp" type="date" value={f.date} onChange={set("date")} />
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+          {criticalCount > 0 && (
+            <div style={{
+              display:"flex", alignItems:"center", gap:6,
+              background:"rgba(220,38,38,0.07)", border:"1px solid rgba(220,38,38,0.25)",
+              borderRadius:5, padding:"4px 10px", fontSize:11, color:"#dc2626",
+              fontFamily:"'IBM Plex Mono',monospace",
+            }}>
+              <span style={{ width:6, height:6, borderRadius:"50%", background:"#dc2626", display:"inline-block", animation:"pulse 1.5s ease-in-out infinite" }}/>
+              {criticalCount} CRITICAL
+            </div>
+          )}
+          {/* Legend button — prominent */}
+          <button onClick={() => { setShowLegend(true); playClick(); }}
+            title="Open legend and usage guide"
+            style={{
+              display:"flex", alignItems:"center", gap:7,
+              background:"linear-gradient(135deg,#7c3aed,#6366f1)",
+              border:"none", borderRadius:7, color:"#ffffff",
+              fontSize:12, fontWeight:700, padding:"7px 14px", cursor:"pointer",
+              fontFamily:"'IBM Plex Mono',monospace", letterSpacing:"0.04em",
+              boxShadow:"0 2px 8px rgba(99,102,241,0.35)",
+              transition:"all 0.15s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform="translateY(-1px)"; e.currentTarget.style.boxShadow="0 4px 14px rgba(99,102,241,0.45)"; }}
+            onMouseLeave={e => { e.currentTarget.style.transform="translateY(0)"; e.currentTarget.style.boxShadow="0 2px 8px rgba(99,102,241,0.35)"; }}>
+            <span style={{fontSize:14}}>?</span> How to Use
+          </button>
+          {/* Audio toggle — prominent */}
+          <button onClick={() => { if (audioOn) stop(); setAudioOn(!audioOn); }}
+            title={audioOn ? "Mute audio and voiceovers" : "Enable audio and voiceovers"}
+            style={{
+              display:"flex", alignItems:"center", gap:6,
+              padding:"7px 13px", borderRadius:7, cursor:"pointer",
+              border: audioOn ? "none" : "1px solid #e2e8f0",
+              background: audioOn ? "linear-gradient(135deg,#0891b2,#0284c7)" : "#f8fafc",
+              color: audioOn ? "#ffffff" : "#94a3b8",
+              fontSize:12, fontWeight:700, fontFamily:"'IBM Plex Mono',monospace",
+              boxShadow: audioOn ? "0 2px 8px rgba(8,145,178,0.35)" : "none",
+              transition:"all 0.15s",
+            }}
+            onMouseEnter={e => { if (audioOn) { e.currentTarget.style.transform="translateY(-1px)"; e.currentTarget.style.boxShadow="0 4px 12px rgba(8,145,178,0.45)"; } }}
+            onMouseLeave={e => { e.currentTarget.style.transform="translateY(0)"; e.currentTarget.style.boxShadow = audioOn ? "0 2px 8px rgba(8,145,178,0.35)" : "none"; }}>
+            <span style={{fontSize:14}}>{audioOn ? "🔊" : "🔇"}</span>
+            {audioOn ? "Audio On" : "Audio Off"}
+          </button>
         </div>
       </div>
 
-      <div style={{marginBottom:18}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-          <label className="lbl" style={{marginBottom:0}}>Brief Initiative Description *</label>
-          <div style={{display:"flex",gap:2,background:"var(--off2)",borderRadius:12,padding:2}}>
-            <button
-              onClick={()=>setInputMode("text")}
-              style={{
-                fontSize:11,fontWeight:900,fontFamily:"var(--mono)",
-                padding:"6px 10px",borderRadius:10,border:"none",cursor:"pointer",
-                background:inputMode==="text"?"#fff":"transparent",
-                color:inputMode==="text"?"var(--navy)":"var(--slate)",
-                boxShadow:inputMode==="text"?"var(--shadow-sm)":"none"
-              }}
-            >✏ Type</button>
-            <button
-              onClick={()=>setInputMode("upload")}
-              style={{
-                fontSize:11,fontWeight:900,fontFamily:"var(--mono)",
-                padding:"6px 10px",borderRadius:10,border:"none",cursor:"pointer",
-                background:inputMode==="upload"?"#fff":"transparent",
-                color:inputMode==="upload"?"var(--navy)":"var(--slate)",
-                boxShadow:inputMode==="upload"?"var(--shadow-sm)":"none"
-              }}
-            >↑ Upload Doc</button>
-          </div>
-        </div>
+      <div style={{ display:"flex", alignItems:"flex-start" }}>
 
-        {inputMode==="text" ? (
-          <textarea className="inp"
-            placeholder="What is changing? Who is affected? What does success look like?"
-            value={f.description}
-            onChange={set("description")}
-          />
-        ) : (
-          <div className="card" style={{padding:14}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
-              <div style={{minWidth:0}}>
-                <div style={{fontWeight:900}}>Upload a PDF or DOCX</div>
-                <div style={{fontSize:13,color:"var(--slate)",marginTop:4,lineHeight:1.6}}>
-                  We extract up to ~2 pages of text to prefill your description.
+        {/* ── Sidebar ── */}
+        <div style={{
+          width:196, flexShrink:0, background:"#ffffff",
+          borderRight:`1px solid #e2e8f0`,
+          position:"sticky", top:56,
+          height:"calc(100vh - 56px)", overflowY:"auto",
+          display:"flex", flexDirection:"column",
+          boxShadow:"1px 0 8px rgba(0,0,0,0.04)",
+        }}>
+          {/* Sidebar tab switcher */}
+          <div style={{ display:"flex", borderBottom:`1px solid #e2e8f0`, flexShrink:0 }}>
+            {[{id:"lanes",label:"Swimlanes"},{id:"deps",label:"Dependencies"}].map(t => (
+              <button key={t.id} onClick={() => { setSideTab(t.id); playClick(); }}
+                onMouseEnter={e => { e.currentTarget.style.fontSize="11px"; e.currentTarget.style.color = sideTab===t.id ? "#1e293b" : "#475569"; }}
+                onMouseLeave={e => { e.currentTarget.style.fontSize="10px"; }}
+                style={{
+                  flex:1, padding:"9px 0", fontSize:"10px", fontWeight:700,
+                  fontFamily:"'IBM Plex Mono',monospace", letterSpacing:"0.06em",
+                  textTransform:"uppercase", cursor:"pointer", border:"none",
+                  background: sideTab === t.id ? "#ffffff" : "#f8fafc",
+                  color: sideTab === t.id ? "#1e293b" : "#94a3b8",
+                  borderBottom: sideTab === t.id ? "2px solid #6366f1" : "2px solid transparent",
+                  transition:"font-size 0.15s ease, color 0.15s ease",
+                }}>{t.label}</button>
+            ))}
+          </div>
+
+          <div style={{ overflowY:"auto", flex:1, paddingTop:14 }}>
+            {sideTab === "lanes" ? (
+              <div style={{ padding:"0 14px 14px" }}>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
+                  <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"#94a3b8" }}>Lanes</div>
+                  {focusLane && (
+                    <div onClick={() => { setFocusLane(null); playClick(); }}
+                      style={{ fontSize:10, fontWeight:600, color:"#6366f1", cursor:"pointer",
+                        background:"rgba(99,102,241,0.07)", border:"1px solid rgba(99,102,241,0.2)",
+                        borderRadius:4, padding:"2px 7px" }}>
+                      Show All ✕
+                    </div>
+                  )}
                 </div>
-                {uploadedFileName && (
-                  <div style={{marginTop:8,fontFamily:"var(--mono)",fontSize:12,color:"var(--slate2)"}}>
-                    File: {uploadedFileName}
+                {LANES.map(lane => (
+                  <div key={lane.id}
+                    onClick={() => { setFocusLane(focusLane === lane.id ? null : lane.id); playClick(); }}
+                    onMouseEnter={() => playHover()}
+                    style={{
+                      display:"flex", alignItems:"center", gap:8, padding:"5px 8px",
+                      borderRadius:5, cursor:"pointer", marginBottom:2,
+                      background: focusLane === lane.id ? "rgba(99,102,241,0.06)" : "transparent",
+                      border: focusLane === lane.id ? "1px solid rgba(99,102,241,0.15)" : "1px solid transparent",
+                      opacity: focusLane && focusLane !== lane.id ? 0.35 : 1,
+                      transition:"all 0.15s",
+                    }}>
+                    <div style={{ width:7, height:7, borderRadius:2, background:lane.accent, flexShrink:0 }}/>
+                    <span style={{ fontSize:12, color:"#334155", fontWeight: focusLane === lane.id ? 700 : 400 }}>{lane.label}</span>
                   </div>
-                )}
+                ))}
+                <div style={{ height:1, background:"#e2e8f0", margin:"12px 0" }}/>
+                <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"#94a3b8", marginBottom:8 }}>Status</div>
+                {Object.entries(STATUS).map(([k,v]) => (
+                  <div key={k} style={{ display:"flex", alignItems:"center", gap:7, marginBottom:5 }}>
+                    <div style={{ width:7, height:7, borderRadius:2, background:v.dot, flexShrink:0 }}/>
+                    <span style={{ fontSize:11, color:"#334155" }}>{v.label}</span>
+                  </div>
+                ))}
+                <div style={{ height:1, background:"#e2e8f0", margin:"12px 0" }}/>
+                <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:"#94a3b8", marginBottom:8 }}>Key Dates</div>
+                {(view === "d1" ? [
+                  {code:"NOW", val:"Feb 18, 2026", c:"#2563eb"},
+                  {code:"MOB", val:"Mar 1–31",     c:"#7c3aed"},
+                  {code:"RDY", val:"Apr 1–30",     c:"#b45309"},
+                  {code:"D-1", val:"May 1, 2026",  c:"#dc2626"},
+                ] : [
+                  {code:"Mo1", val:"Post-close stabilize", c:"#059669"},
+                  {code:"Mo2", val:"Core enablement",      c:"#0891b2"},
+                  {code:"Mo4", val:"Migration prep",       c:"#2563eb"},
+                  {code:"Mo6", val:"TSA Exit ✓",           c:"#047857"},
+                ]).map(d => (
+                  <div key={d.code} style={{ display:"flex", gap:8, alignItems:"baseline", marginBottom:5 }}>
+                    <span style={{ fontSize:10, fontFamily:"'IBM Plex Mono',monospace", fontWeight:700, color:d.c, minWidth:28 }}>{d.code}</span>
+                    <span style={{ fontSize:11, color:"#334155" }}>{d.val}</span>
+                  </div>
+                ))}
               </div>
-              <label className="btn btn-secondary" style={{cursor:uploadBusy?"not-allowed":"pointer",opacity:uploadBusy?.8:1}}>
-                {uploadBusy ? "Reading…" : "Choose File"}
-                <input type="file" accept=".pdf,.docx,.txt" onChange={handleFile} style={{display:"none"}} disabled={uploadBusy}/>
-              </label>
-            </div>
-            {uploadErr && (
-              <div style={{marginTop:12,color:"var(--red)",fontWeight:800}}>
-                {uploadErr}
-              </div>
+            ) : (
+              <DepPanel activeDep={activeDep} setActiveDep={setActiveDep} playClick={playClick} />
             )}
           </div>
-        )}
-      </div>
-
-      <div style={{display:"flex",justifyContent:"flex-end"}}>
-        <button className="btn btn-primary" disabled={!ok} onClick={()=>{ClickAudio.click(); onNext(f);}}>
-          Continue →
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/* ===== Stage 2 ===== */
-function Stage2({project,onNext}){
-  const [sc,setSc]=useState(()=>Object.fromEntries(DIMENSIONS.map(d=>[d.id,2])));
-  const tier = useMemo(()=>getTier(sc),[sc]);
-  const cfg = TIER_CFG[tier];
-  const done = true;
-
-  return(
-    <div className="fade-up">
-      <h2 style={{fontFamily:"var(--serif)",fontSize:28,marginBottom:6}}>Tiering</h2>
-      <p style={{fontSize:15,color:"var(--slate)",marginBottom:18,lineHeight:1.6}}>
-        Answer a few questions to recommend an OCM support tier.
-      </p>
-
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
-        {DIMENSIONS.map(d=>(
-          <div key={d.id} className="card" style={{padding:14}}>
-            <div style={{fontWeight:900,marginBottom:10}}>{d.label}</div>
-            <div style={{display:"flex",gap:10}}>
-              {d.opts.map(o=>(
-                <button key={o.v} className="btn"
-                  onClick={()=>{ClickAudio.click(); setSc(p=>({...p,[d.id]:o.v}));}}
-                  style={{
-                    flex:1,
-                    padding:"10px 10px",
-                    borderRadius:12,
-                    background: sc[d.id]===o.v ? "#eff6ff" : "#fff",
-                    border: sc[d.id]===o.v ? "1px solid rgba(37,99,235,.45)" : "1px solid var(--border)",
-                    color: sc[d.id]===o.v ? "#2563eb" : "#334155",
-                    boxShadow: sc[d.id]===o.v ? "0 0 0 3px rgba(37,99,235,.10)" : "none"
-                  }}>
-                  <span style={{fontFamily:"var(--mono)",fontSize:12,fontWeight:900}}>{o.l}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="card" style={{padding:"14px 16px",marginBottom:14,background:cfg.bg,borderColor:cfg.bdr}}>
-        <div style={{fontFamily:"var(--mono)",fontSize:12,fontWeight:900,letterSpacing:".08em",color:cfg.color,marginBottom:10}}>
-          RECOMMENDED: {cfg.label} · {cfg.sub}
         </div>
-        <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
-          <div style={{fontSize:20}}>{tier===1?"🔴":tier===2?"🟡":"🟢"}</div>
-          <div style={{fontSize:14,color:"var(--slate)",lineHeight:1.7}}>
-            {cfg.desc}
-          </div>
-        </div>
-      </div>
 
-      <div style={{display:"flex",justifyContent:"flex-end"}}>
-        <button className="btn btn-primary" disabled={!done} onClick={()=>{ClickAudio.click(); onNext(sc,tier);}}>
-          Review &amp; Configure Map →
-        </button>
-      </div>
-    </div>
-  );
-}
+        {/* ── Grid ── */}
+        <div style={{ flex:1, minWidth:0 }}>
 
-/* ===== Stage 3 ===== */
-function Stage3({project,suggestedTier,apiKey,onNext}){
-  const [tier,setTier]=useState(suggestedTier);
-  const [override,setOverride]=useState("");
-  const [lanes,setLanes]=useState(TIER_CFG[suggestedTier].lanes.join("\n"));
-  const [phases,setPhases]=useState(TIER_CFG[suggestedTier].phases.join("\n"));
-  const [gen,setGen]=useState(false);
-  const [err,setErr]=useState(null);
-  const cfg=TIER_CFG[tier];
-
-  const laneArr=useMemo(()=>lanes.split("\n").map(s=>s.trim()).filter(Boolean),[lanes]);
-  const phaseArr=useMemo(()=>phases.split("\n").map(s=>s.trim()).filter(Boolean),[phases]);
-
-  const changeTier=t=>{
-    ClickAudio.click();
-    setTier(t);
-    setLanes(TIER_CFG[t].lanes.join("\n"));
-    setPhases(TIER_CFG[t].phases.join("\n"));
-  };
-
-  const emptyTasks=()=>{
-    const t={};
-    laneArr.forEach(l=>{ t[l]={}; phaseArr.forEach(p=>{ t[l][p]=[]; }); });
-    return t;
-  };
-
-  const generate=async()=>{
-    if(!apiKey.trim()){
-      setErr("Please enter your Anthropic API key in the top bar before generating.");
-      return;
-    }
-    ClickAudio.click();
-    setGen(true); setErr(null);
-    try{
-      const prompt=`Generate a readiness map for this OCM initiative.
-Name: ${project.name}
-Description: ${project.description}
-Tier: ${tier} (${cfg.sub})
-Phases: ${phaseArr.join(", ")}
-Lanes (workstreams): ${laneArr.join(", ")}
-Return ONLY this JSON structure, nothing else:
-{"tasks":{"LANE_NAME":{"PHASE_NAME":[{"label":"short task name under 6 words","status":"blue","detail":"2-3 sentence description of this task and what completion looks like.","owner":"","links":[],"blocks":[],"blockedBy":[]}]}}}
-Important rules:
-- Replace LANE_NAME with actual lane names from the list above
-- Replace PHASE_NAME with actual phase names from the list above
-- status must be one of: ${cfg.statuses.join(", ")}
-- Include 1-3 tasks per lane per phase
-- Tasks must be realistic OCM activities for a ${cfg.sub} initiative`;
-      const result=await callClaude(prompt, apiKey);
-      setGen(false);
-      onNext(tier,laneArr,phaseArr,result.tasks,override,true);
-    }catch(e){
-      setGen(false);
-      setErr(`Generation failed: ${e.message}. You can start with an empty map and add tasks manually.`);
-    }
-  };
-
-  return(
-    <div className="fade-up">
-      <h2 style={{fontFamily:"var(--serif)",fontSize:28,marginBottom:6}}>Configure</h2>
-      <p style={{fontSize:15,color:"var(--slate)",marginBottom:18,lineHeight:1.6}}>
-        Confirm the tier, phases, and workstreams — then generate tasks with AI or start empty.
-      </p>
-
-      <div className="card" style={{padding:"14px 16px",marginBottom:14}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
-          <div>
-            <div className="lbl" style={{marginBottom:6}}>Support Tier</div>
-            <div style={{fontWeight:900, fontSize:16}}>{cfg.label} · {cfg.sub}</div>
-          </div>
-          <div style={{display:"flex",gap:8}}>
-            {[1,2,3].map(t=>(
-              <button key={t} className="btn"
-                onClick={()=>changeTier(t)}
+          {/* View Toggle */}
+          <div style={{
+            position:"sticky", top:56, zIndex:51,
+            background:"#ffffff", borderBottom:`1px solid #e2e8f0`,
+            boxShadow:"0 1px 3px rgba(0,0,0,0.04)",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            padding:"8px 24px", gap:4,
+          }}>
+            {[
+              {id:"d1",  label:"⚡ Day-1 Readiness", sub:"Now → May 1, 2026",  activeColor:"#2563eb"},
+              {id:"tsa", label:"📋 TSA Exit Plan",    sub:"May → October 2026", activeColor:"#059669"},
+            ].map(t => (
+              <button key={t.id}
+                onClick={() => { setView(t.id); setSelected(null); stop(); setFocusLane(null); setActiveDep(null); playClick(); }}
+                onMouseEnter={() => playHover()}
                 style={{
-                  background: tier===t ? "#eff6ff" : "#fff",
-                  border: tier===t ? "1px solid rgba(37,99,235,.45)" : "1px solid var(--border)",
-                  color: tier===t ? "#2563eb" : "#334155"
-                }}
-              >
-                {TIER_CFG[t].label}
+                  padding:"6px 28px", borderRadius:6, border:"none", cursor:"pointer",
+                  fontFamily:"inherit", textAlign:"center",
+                  background: view === t.id ? "#f8fafc" : "transparent",
+                  borderBottom: view === t.id ? `2px solid ${t.activeColor}` : "2px solid transparent",
+                  transition:"all 0.15s",
+                }}>
+                <div style={{ fontSize:12, fontWeight:700, color: view === t.id ? t.activeColor : "#94a3b8" }}>{t.label}</div>
+                <div style={{ fontSize:10, color: view === t.id ? "#64748b" : "#cbd5e1", marginTop:1, fontFamily:"'IBM Plex Mono',monospace" }}>{t.sub}</div>
               </button>
             ))}
           </div>
-        </div>
 
-        {tier!==suggestedTier && (
-          <div style={{marginTop:12}}>
-            <label className="lbl">Override rationale</label>
-            <input className="inp" value={override} onChange={e=>setOverride(e.target.value)}
-              placeholder="Why are you changing from the suggested tier?" />
+          <div style={{ minWidth:800 }}>
+
+            {/* Phase header row with gate arrows */}
+            <div style={{
+              display:"grid", gridTemplateColumns:`160px repeat(${phases.length}, 1fr)`,
+              borderBottom:`1px solid #e2e8f0`,
+              background:"#f8fafc", position:"sticky", top:112, zIndex:50,
+              boxShadow:"0 1px 3px rgba(0,0,0,0.04)",
+            }}>
+              <div style={{ borderRight:`1px solid #e2e8f0` }}/>
+              {phases.map((p,i) => (
+                <div key={p.id} style={{ position:"relative" }}>
+                  <div style={{
+                    padding:"10px 14px",
+                    borderRight: i < phases.length-1 ? `1px solid #e2e8f0` : "none",
+                    borderTop:`2px solid ${p.accent}`,
+                    background:`linear-gradient(180deg,${p.accent}0d 0%,transparent 100%)`,
+                  }}>
+                    <div style={{ fontSize:12, fontWeight:700, color:p.accent, fontFamily:"'IBM Plex Mono',monospace" }}>{p.label}</div>
+                    <div style={{ fontSize:10, color:"#94a3b8", marginTop:2, fontFamily:"'IBM Plex Mono',monospace" }}>{p.dates}</div>
+                  </div>
+                  {/* Phase gate arrow */}
+                  {p.arrow && i < phases.length-1 && (
+                    <div title={p.arrow} style={{
+                      position:"absolute", right:-12, top:"50%", transform:"translateY(-50%)",
+                      zIndex:10, cursor:"help",
+                    }}>
+                      <div style={{
+                        width:22, height:22, borderRadius:"50%",
+                        background:"#ffffff", border:"1px solid #e2e8f0",
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                        fontSize:11, color:"#94a3b8",
+                        transition:"all 0.15s",
+                        boxShadow:"0 1px 4px rgba(0,0,0,0.08)",
+                      }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.background = "#f0f0ff";
+                          e.currentTarget.style.color = "#6366f1";
+                          e.currentTarget.style.borderColor = "#a5b4fc";
+                          e.currentTarget.style.boxShadow = "0 2px 8px rgba(99,102,241,0.2)";
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.background = "#ffffff";
+                          e.currentTarget.style.color = "#94a3b8";
+                          e.currentTarget.style.borderColor = "#e2e8f0";
+                          e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,0.08)";
+                        }}>›</div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Lane rows */}
+            {LANES.map((lane,li) => (
+              <div key={lane.id} style={{
+                display:"grid", gridTemplateColumns:`160px repeat(${phases.length}, 1fr)`,
+                borderBottom:`1px solid #e2e8f0`,
+                background: li % 2 === 0 ? "#ffffff" : "#fafbfc",
+                opacity: !focusLane || focusLane === lane.id ? 1 : 0.12,
+                transition:"opacity 0.2s",
+              }}>
+                {/* Lane label */}
+                <div onClick={() => { setFocusLane(focusLane === lane.id ? null : lane.id); playClick(); }}
+                  onMouseEnter={() => playHover()}
+                  style={{
+                    display:"flex", alignItems:"flex-start", gap:8, padding:"12px 10px",
+                    borderRight:`1px solid #e2e8f0`, cursor:"pointer",
+                    background:"#f8fafc", position:"sticky", left:0, zIndex:10,
+                    boxShadow:"1px 0 4px rgba(0,0,0,0.06)",
+                  }}>
+                  <div style={{ width:2, height:24, borderRadius:1, background:lane.accent, flexShrink:0, marginTop:2 }}/>
+                  <div style={{ fontSize:12, fontWeight:700, color:lane.accent, lineHeight:1.4 }}>{lane.label}</div>
+                </div>
+
+                {/* Phase cells */}
+                {phases.map((p,pi) => {
+                  const cellTasks = tasks[lane.id]?.[p.id] || [];
+                  return (
+                    <div key={p.id} style={{
+                      padding:"8px", minHeight:76,
+                      borderRight: pi < phases.length-1 ? `1px solid #e2e8f0` : "none",
+                      display:"flex", flexDirection:"column", gap:4,
+                    }}>
+                      {cellTasks.map((task,ti) => {
+                        const s = STATUS[task.status];
+                        const tt = TASK_TYPES[task.type || "standard"];
+                        const isSel = selected && selected.lane === lane.id && selected.phase === p.id && selected.idx === ti;
+                        const isDepHL = isDepHighlighted(lane.id, task.label);
+                        const hasVO = !!task.voiceover;
+                        const isBlocked = task.type === "blocked";
+
+                        return (
+                          <div key={ti}
+                            onClick={() => handleSelectTask(task, lane.id, p.id, ti)}
+                            onMouseEnter={e => {
+                              playHover();
+                              e.currentTarget.style.borderColor = s.border;
+                              e.currentTarget.style.background = s.bg;
+                              e.currentTarget.style.transform = "translateY(-1px)";
+                              e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.08)";
+                            }}
+                            onMouseLeave={e => {
+                              if (!isSel && !isDepHL) {
+                                e.currentTarget.style.borderColor = isBlocked ? "rgba(220,38,38,0.2)" : "#e2e8f0";
+                                e.currentTarget.style.background = isBlocked ? "rgba(220,38,38,0.03)" : "transparent";
+                                e.currentTarget.style.transform = "translateY(0)";
+                                e.currentTarget.style.boxShadow = "none";
+                              }
+                            }}
+                            style={{
+                              background: isSel ? s.bg : isDepHL ? "rgba(99,102,241,0.07)" : isBlocked ? "rgba(220,38,38,0.03)" : "transparent",
+                              border:`1px solid ${isSel ? s.border : isDepHL ? "rgba(99,102,241,0.35)" : isBlocked ? "rgba(220,38,38,0.2)" : "#e2e8f0"}`,
+                              borderRadius:4, padding:"4px 8px",
+                              fontSize:11, color: isSel ? s.text : isDepHL ? "#6366f1" : "#1e293b",
+                              cursor:"pointer", transition:"all 0.12s", lineHeight:1.4,
+                              boxShadow: isSel ? "0 2px 8px rgba(0,0,0,0.08)" : "none",
+                              display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:4,
+                            }}>
+                            <div style={{ display:"flex", alignItems:"baseline", gap:4, flex:1, minWidth:0 }}>
+                              {tt.icon && (
+                                <span title={tt.label + ": " + tt.desc} style={{ fontSize:10, flexShrink:0, opacity:0.55 }}>{tt.icon}</span>
+                              )}
+                              <span style={{ fontSize:11, lineHeight:1.4 }}>{task.label}</span>
+                            </div>
+                            <div style={{ display:"flex", alignItems:"center", gap:3, flexShrink:0 }}>
+                              {hasVO && audioOn && <span title="Voiceover available" style={{ fontSize:9, opacity:0.35 }}>🔊</span>}
+                              <div style={{ width:5, height:5, borderRadius:"50%", background:s.dot, flexShrink:0, marginTop:2 }}/>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {cellTasks.length === 0 && (
+                        <div style={{ fontSize:10, color:"#e2e8f0", paddingTop:4 }}>—</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+
           </div>
-        )}
-      </div>
-
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
-        <div>
-          <label className="lbl">Map Lanes (one per line)</label>
-          <textarea className="inp" style={{minHeight:120}} value={lanes} onChange={e=>setLanes(e.target.value)} />
-          <div style={{fontSize:13,color:"var(--slate)",marginTop:6}}>Default: {cfg.lanes.join(", ")}</div>
-        </div>
-        <div>
-          <label className="lbl">Map Phases (one per line)</label>
-          <textarea className="inp" style={{minHeight:120}} value={phases} onChange={e=>setPhases(e.target.value)} />
-          <div style={{fontSize:13,color:"var(--slate)",marginTop:6}}>Default: {cfg.phases.join(", ")}</div>
         </div>
       </div>
 
-      <div className="card" style={{padding:"14px 16px",marginBottom:14,background:cfg.bg,borderColor:cfg.bdr}}>
-        <div style={{fontSize:12,fontWeight:900,letterSpacing:".08em",color:cfg.color,fontFamily:"var(--mono)",marginBottom:10}}>
-          REQUIRED DELIVERABLES
-        </div>
-        <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-          {cfg.deliverables.map(d=>(
-            <span key={d} className="pill" style={{borderColor:cfg.bdr,color:cfg.color}}>
-              {d}
-            </span>
-          ))}
-        </div>
-      </div>
+      {/* ── Detail Drawer ── */}
+      {selected && (
+        <div style={{
+          position:"fixed", bottom:0, left:196, right:0, zIndex:200,
+          background:"#ffffff", borderTop:`2px solid ${STATUS[selected.task.status].border}`,
+          padding:"14px 24px", display:"flex", alignItems:"flex-start", gap:16,
+          boxShadow:"0 -8px 32px rgba(0,0,0,0.1)",
+          animation:"drawerPopUp 0.22s cubic-bezier(0.34,1.56,0.64,1) both",
+        }}>
+          <div style={{ flex:1 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6, flexWrap:"wrap" }}>
+              {/* Status badge */}
+              <div style={{
+                fontSize:9, fontWeight:700, padding:"2px 7px", borderRadius:3,
+                textTransform:"uppercase", letterSpacing:"0.08em", fontFamily:"'IBM Plex Mono',monospace",
+                background:STATUS[selected.task.status].bg,
+                border:`1px solid ${STATUS[selected.task.status].border}`,
+                color:STATUS[selected.task.status].text,
+              }}>{STATUS[selected.task.status].label}</div>
 
-      {err && (
-        <div className="card" style={{padding:"12px 14px",borderColor:"#fecaca",background:"#fff1f2",color:"var(--red)",marginBottom:12}}>
-          {err}
+              {/* Task type badge */}
+              {selected.task.type && selected.task.type !== "standard" && (
+                <div style={{
+                  fontSize:9, fontWeight:700, padding:"2px 7px", borderRadius:3,
+                  textTransform:"uppercase", letterSpacing:"0.08em", fontFamily:"'IBM Plex Mono',monospace",
+                  background:"rgba(99,102,241,0.07)", border:"1px solid rgba(99,102,241,0.2)", color:"#6366f1",
+                }}>
+                  {TASK_TYPES[selected.task.type]?.icon} {TASK_TYPES[selected.task.type]?.label}
+                </div>
+              )}
+
+              <div style={{ fontSize:15, fontWeight:700, color:"#1e293b" }}>{selected.task.label}</div>
+
+              {/* Dep chain badge */}
+              {selected.task.depChain && (
+                <div onClick={() => { setSideTab("deps"); setActiveDep(selected.task.depChain); playClick(); }}
+                  style={{
+                    fontSize:9, fontWeight:700, padding:"2px 7px", borderRadius:3, cursor:"pointer",
+                    textTransform:"uppercase", letterSpacing:"0.08em", fontFamily:"'IBM Plex Mono',monospace",
+                    background:"rgba(220,38,38,0.06)", border:"1px solid rgba(220,38,38,0.2)", color:"#dc2626",
+                  }}>
+                  ⛓ View Dependency Chain →
+                </div>
+              )}
+
+              {/* Voiceover */}
+              {selected.task.voiceover && audioOn && (
+                <div style={{ display:"flex", alignItems:"center", gap:5,
+                  fontSize:10, color: speaking ? "#2563eb" : "#94a3b8",
+                  background: speaking ? "rgba(37,99,235,0.06)" : "#f8fafc",
+                  border:`1px solid ${speaking ? "rgba(37,99,235,0.2)" : "#e2e8f0"}`,
+                  borderRadius:4, padding:"2px 8px", fontFamily:"'IBM Plex Mono',monospace" }}>
+                  <span>{speaking ? "▶" : "🔊"}</span>
+                  {speaking ? (
+                    <span onClick={stop} style={{ cursor:"pointer", color:"#dc2626", fontWeight:700 }}>■ Stop</span>
+                  ) : (
+                    <span onClick={() => speak(selected.task.voiceover)} style={{ cursor:"pointer", color:"#2563eb", fontWeight:700 }}>▶ Play</span>
+                  )}
+                </div>
+              )}
+            </div>
+            <div style={{ fontSize:13, color:"#475569", lineHeight:1.7 }}>{selected.task.detail}</div>
+
+            {/* Document Links */}
+            {selected.task.links && selected.task.links.length > 0 && (
+              <div style={{ marginTop:10, paddingTop:10, borderTop:"1px solid #e2e8f0" }}>
+                <div style={{ fontSize:10, fontWeight:700, color:"#94a3b8", fontFamily:"'IBM Plex Mono',monospace", letterSpacing:"0.05em", marginBottom:6 }}>
+                  LINKED DOCUMENTS
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                  {selected.task.links.map((link, i) => (
+                    <a key={i} href={link.url} target="_blank" rel="noopener noreferrer"
+                      style={{ display:"inline-flex", alignItems:"center", gap:6,
+                        fontSize:12, fontWeight:600, color:"#2563eb",
+                        background:"#eff6ff", border:"1px solid #bfdbfe",
+                        borderRadius:5, padding:"5px 10px", textDecoration:"none",
+                        transition:"all 0.15s ease", width:"fit-content" }}
+                      onMouseEnter={e => { e.currentTarget.style.background="#dbeafe"; e.currentTarget.style.borderColor="#93c5fd"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background="#eff6ff"; e.currentTarget.style.borderColor="#bfdbfe"; }}>
+                      <span style={{ fontSize:13 }}>📄</span>
+                      {link.label}
+                      <span style={{ fontSize:10, color:"#93c5fd" }}>↗</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <button onClick={() => { setSelected(null); stop(); playClick(); }}
+            style={{ background:"#f1f5f9", border:`1px solid #e2e8f0`, borderRadius:5,
+              color:"#64748b", fontSize:11, padding:"4px 10px", cursor:"pointer",
+              fontFamily:"'IBM Plex Mono',monospace", flexShrink:0 }}>
+            Close ✕
+          </button>
         </div>
       )}
 
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-        <button className="btn btn-secondary" disabled={gen || !laneArr.length || !phaseArr.length}
-          onClick={()=>{ClickAudio.click(); onNext(tier,laneArr,phaseArr,emptyTasks(),override,false);}}>
-          Start with Empty Map
-        </button>
+      <style>{`
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        @keyframes drawerPopUp {
+          0%   { transform: translateY(100%); opacity: 0; }
+          100% { transform: translateY(0);    opacity: 1; }
+        }
+      `}</style>
 
-        <button className="btn btn-primary" disabled={gen || !laneArr.length || !phaseArr.length} onClick={generate}>
-          {gen ? (
-            <>
-              <span style={{width:14,height:14,border:"2px solid rgba(255,255,255,.5)",borderTopColor:"#fff",borderRadius:"50%",display:"inline-block",animation:"spin .7s linear infinite"}}></span>
-              Generating…
-            </>
-          ) : (
-            <>✦ Generate Map with AI →</>
-          )}
-        </button>
-      </div>
-    </div>
-  );
-}
-/* ===== Dependency Graph Utilities ===== */
-
-function buildDependencyIndex(tasks){
-  const index = {};
-  Object.entries(tasks).forEach(([lane,phases])=>{
-    Object.entries(phases).forEach(([phase,arr])=>{
-      arr.forEach((task,i)=>{
-        const id = getTaskId(lane,phase,i);
-        index[id] = task;
-      });
-    });
-  });
-  return index;
-}
-
-function getUpstreamChain(taskId, tasks){
-  const index = buildDependencyIndex(tasks);
-  const visited = new Set();
-  const result = [];
-
-  function walk(id){
-    if(visited.has(id)) return;
-    visited.add(id);
-    const t = index[id];
-    if(!t) return;
-    (t.blockedBy||[]).forEach(dep=>{
-      result.push(dep);
-      walk(dep);
-    });
-  }
-
-  walk(taskId);
-  return result;
-}
-
-function getDownstreamChain(taskId, tasks){
-  const index = buildDependencyIndex(tasks);
-  const visited = new Set();
-  const result = [];
-
-  function walk(id){
-    if(visited.has(id)) return;
-    visited.add(id);
-    const t = index[id];
-    if(!t) return;
-    (t.blocks||[]).forEach(dep=>{
-      result.push(dep);
-      walk(dep);
-    });
-  }
-
-  walk(taskId);
-  return result;
-}
-
-/* ===== Stage 4 ===== */
-
-  function deleteLane(name){
-    if(!confirm(`Delete workstream "${name}"?`)) return;
-
-    setLaneList(p=>p.filter(l=>l.name!==name));
-
-    setTasks(p=>{
-      const clone = deepClone(p);
-      delete clone[name];
-      return clone;
-    });
-  }
-
-  function renameLane(oldName,newName){
-    if(!newName.trim()) return;
-    if(oldName===newName) return;
-
-    setLaneList(p=>p.map(l=>l.name===oldName?{...l,name:newName}:l));
-
-    setTasks(p=>{
-      const clone = {};
-      Object.entries(p).forEach(([lane,ph])=>{
-        clone[lane===oldName?newName:lane]=ph;
-      });
-      return clone;
-    });
-  }
-
-  function toggleLaneVisibility(name){
-    setLaneList(p=>p.map(l=>l.name===name?{...l,visible:!l.visible}:l));
-  }
-
-  function toggleLaneCollapse(name){
-    setLaneList(p=>p.map(l=>l.name===name?{...l,collapsed:!l.collapsed}:l));
-  }
-
-  /* ===== Task Operations ===== */
-
-  function addTask(lane,phase){
-    setTasks(p=>{
-      const clone = deepClone(p);
-      clone[lane][phase].push({
-        label:"New Task",
-        status:"blue",
-        detail:"",
-        owner:"",
-        blocks:[],
-        blockedBy:[]
-      });
-      return clone;
-    });
-  }
-
-  function updateTask(lane,phase,index,updates){
-    setTasks(p=>{
-      const clone = deepClone(p);
-      clone[lane][phase][index]={...clone[lane][phase][index],...updates};
-      return clone;
-    });
-  }
-
-  function deleteTask(lane,phase,index){
-    setTasks(p=>{
-      const clone = deepClone(p);
-      const id = getTaskId(lane,phase,index);
-
-      clone[lane][phase].splice(index,1);
-
-      Object.values(clone).forEach(phases=>{
-        Object.values(phases).forEach(arr=>{
-          arr.forEach(task=>{
-            task.blocks = (task.blocks||[]).filter(b=>b!==id);
-            task.blockedBy = (task.blockedBy||[]).filter(b=>b!==id);
-          });
-        });
-      });
-
-      return clone;
-    });
-
-    setSelectedTask(null);
-  }
-
-  /* ===== Phase Date Update ===== */
-
-  function updatePhaseDate(phaseName, field, value){
-    setPhaseList(p=>p.map(ph=>ph.name===phaseName?{...ph,[field]:value}:ph));
-  }
-
-  /* ===== Import / Export ===== */
-
-  function exportJSON(){
-    const data = {
-      project,
-      tier,
-      lanes:laneList,
-      phases:phaseList,
-      tasks
-    };
-    const blob = new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href=url;
-    a.download=`${project.name || "ocm-map"}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  function importJSON(file){
-    const reader = new FileReader();
-    reader.onload=e=>{
-      try{
-        const data = JSON.parse(e.target.result);
-        setLaneList(data.lanes || []);
-        setPhaseList(data.phases || []);
-        setTasks(data.tasks || {});
-      }catch(err){
-        alert("Invalid JSON file.");
-      }
-    };
-    reader.readAsText(file);
-  }
-
-  /* ===== Derived ===== */
-
-  const visibleLanes = laneList.filter(l=>l.visible);
-
-  /* ===== UI Render (Grid + Sidebars in Part 3) ===== */
-
-  return (
-    <div className="stage4Shell">
-      {/* Left Sidebar + Main + Drawer defined in Part 3 */}
-    </div>
-  );
-}
- 
-/* =========================================================
-   Stage 4 FIXED (integrated, stable, dependency-safe)
-   ========================================================= */
-
-function Stage4Fixed({
-  project,
-  tier,
-  lanes,
-  phases,
-  initialTasks,
-  overrideReason,
-  generated,
-  apiKey,
-}) {
-  /* ===== Core state ===== */
-  const [laneList, setLaneList] = useState(
-    Array.isArray(lanes) && lanes.length
-      ? lanes.map((l, i) => ({
-          name: l,
-          color: LANE_PALETTE[i % LANE_PALETTE.length],
-          visible: true,
-          collapsed: false,
-        }))
-      : []
-  );
-
-  const [phaseList, setPhaseList] = useState(
-    Array.isArray(phases) && phases.length
-      ? phases.map((p) => ({ name: p, start: "", end: "" }))
-      : []
-  );
-
-  const [tasks, setTasks] = useState(initialTasks || {});
-  const [selectedTask, setSelectedTask] = useState(null);
-
-  const [leftRail, setLeftRail] = useState(false);
-  const [rightRail, setRightRail] = useState(false);
-  const [activeLeftTab, setActiveLeftTab] = useState("workstreams");
-
-  const [executiveMode, setExecutiveMode] = useState(false);
-
-  /* ===== Ensure tasks shape matches lanes/phases ===== */
-  function ensureTaskShape(baseTasks, lanesArr, phasesArr) {
-    const out = deepClone(baseTasks || {});
-    lanesArr.forEach((ln) => {
-      if (!out[ln.name]) out[ln.name] = {};
-      phasesArr.forEach((ph) => {
-        if (!Array.isArray(out[ln.name][ph.name])) out[ln.name][ph.name] = [];
-      });
-    });
-    // Remove lanes/phases that no longer exist (optional but keeps clean)
-    Object.keys(out).forEach((laneName) => {
-      if (!lanesArr.some((l) => l.name === laneName)) delete out[laneName];
-      else {
-        Object.keys(out[laneName]).forEach((phaseName) => {
-          if (!phasesArr.some((p) => p.name === phaseName)) delete out[laneName][phaseName];
-        });
-      }
-    });
-    return out;
-  }
-
-  useEffect(() => {
-    setTasks((p) => ensureTaskShape(p, laneList, phaseList));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [laneList.length, phaseList.length]);
-
-  /* ===== Dependency index + ID listing ===== */
-  const allTaskIds = useMemo(() => {
-    const ids = [];
-    laneList.forEach((l) => {
-      phaseList.forEach((p) => {
-        const arr = tasks?.[l.name]?.[p.name] || [];
-        arr.forEach((_, i) => ids.push(getTaskId(l.name, p.name, i)));
-      });
-    });
-    return ids;
-  }, [tasks, laneList, phaseList]);
-
-  function getTaskById(id, t = tasks) {
-    const { lane, phase, idx } = parseTaskId(id);
-    return t?.[lane]?.[phase]?.[idx] || null;
-  }
-
-  function normalizeDependencies(t) {
-    const index = buildDependencyIndex(t);
-    Object.values(t).forEach((phasesObj) => {
-      Object.values(phasesObj).forEach((arr) => {
-        arr.forEach((task) => {
-          task.blocks = Array.from(new Set((task.blocks || []).filter((id) => !!index[id])));
-          task.blockedBy = Array.from(new Set((task.blockedBy || []).filter((id) => !!index[id])));
-        });
-      });
-    });
-    return t;
-  }
-
-  /* ===== Reindex IDs + remap dependencies (core integrity) ===== */
-  function reindexAndRemap(baseTasks) {
-    // 1) Build map oldId -> newId based on current iteration order
-    const mapOldToNew = new Map();
-
-    laneList.forEach((l) => {
-      phaseList.forEach((p) => {
-        const arr = baseTasks?.[l.name]?.[p.name] || [];
-        arr.forEach((_, i) => {
-          const oldId = getTaskId(l.name, p.name, i);
-          // newId is same structure but will be recomputed after rebuild; for now identical
-          // We'll rebuild arrays but keep same ordering => indices remain consistent per cell
-          const newId = getTaskId(l.name, p.name, i);
-          mapOldToNew.set(oldId, newId);
-        });
-      });
-    });
-
-    // 2) Rebuild tasks with clean deps remapped
-    const out = ensureTaskShape({}, laneList, phaseList);
-
-    laneList.forEach((l) => {
-      phaseList.forEach((p) => {
-        const arr = baseTasks?.[l.name]?.[p.name] || [];
-        out[l.name][p.name] = arr.map((task) => ({
-          label: task.label || "Untitled",
-          status: task.status || "blue",
-          detail: task.detail || "",
-          owner: task.owner || "",
-          blocks: (task.blocks || []).map((id) => mapOldToNew.get(id) || id),
-          blockedBy: (task.blockedBy || []).map((id) => mapOldToNew.get(id) || id),
-        }));
-      });
-    });
-
-    return normalizeDependencies(out);
-  }
-
-  /* ===== Autosave ===== */
-  useEffect(() => {
-    const payload = {
-      project,
-      tier,
-      lanes: laneList,
-      phases: phaseList,
-      tasks,
-      overrideReason,
-      generated,
-      executiveMode,
-      ui: { leftRail, rightRail, activeLeftTab },
-      selectedTask,
-      savedAt: new Date().toISOString(),
-      version: 1,
-    };
-    localStorage.setItem("ocm_map_autosave", JSON.stringify(payload));
-  }, [project, tier, laneList, phaseList, tasks, overrideReason, generated, executiveMode, leftRail, rightRail, activeLeftTab, selectedTask]);
-
-  /* ===== Lane operations ===== */
-  function addLane(name) {
-    const n = String(name || "").trim();
-    if (!n) return;
-    if (laneList.some((l) => l.name === n)) return;
-
-    const color = LANE_PALETTE[laneList.length % LANE_PALETTE.length];
-    setLaneList((p) => [...p, { name: n, color, visible: true, collapsed: false }]);
-
-    setTasks((p) => {
-      const clone = deepClone(p);
-      clone[n] = clone[n] || {};
-      phaseList.forEach((ph) => (clone[n][ph.name] = clone[n][ph.name] || []));
-      return normalizeDependencies(clone);
-    });
-  }
-
-  function deleteLane(name) {
-    if (!confirm(`Delete workstream "${name}"? This will delete its tasks.`)) return;
-
-    // Remove lane and tasks
-    setLaneList((p) => p.filter((l) => l.name !== name));
-
-    setTasks((p) => {
-      const clone = deepClone(p);
-      delete clone[name];
-      return normalizeDependencies(clone);
-    });
-
-    // Clear selection if it was in that lane
-    if (selectedTask?.startsWith(`${name}||`)) setSelectedTask(null);
-  }
-
-  function renameLane(oldName, newName) {
-    const nn = String(newName || "").trim();
-    if (!nn || nn === oldName) return;
-    if (laneList.some((l) => l.name === nn)) {
-      alert("A workstream with that name already exists.");
-      return;
-    }
-
-    // Update lane list
-    setLaneList((p) => p.map((l) => (l.name === oldName ? { ...l, name: nn } : l)));
-
-    // Remap tasks lane key + remap dependency IDs that include old lane name
-    setTasks((p) => {
-      const base = deepClone(p);
-      base[nn] = base[oldName];
-      delete base[oldName];
-
-      // Replace IDs "oldLane||phase||idx" -> "newLane||phase||idx"
-      Object.values(base).forEach((phasesObj) => {
-        Object.values(phasesObj).forEach((arr) => {
-          arr.forEach((t) => {
-            t.blocks = (t.blocks || []).map((id) => (String(id).startsWith(`${oldName}||`) ? id.replace(`${oldName}||`, `${nn}||`) : id));
-            t.blockedBy = (t.blockedBy || []).map((id) =>
-              String(id).startsWith(`${oldName}||`) ? id.replace(`${oldName}||`, `${nn}||`) : id
-            );
-          });
-        });
-      });
-
-      return normalizeDependencies(base);
-    });
-
-    // Update selected task id if applicable
-    if (selectedTask && selectedTask.startsWith(`${oldName}||`)) {
-      setSelectedTask(selectedTask.replace(`${oldName}||`, `${nn}||`));
-    }
-  }
-
-  function toggleLaneVisibility(name) {
-    setLaneList((p) => p.map((l) => (l.name === name ? { ...l, visible: !l.visible } : l)));
-  }
-  function toggleLaneCollapse(name) {
-    setLaneList((p) => p.map((l) => (l.name === name ? { ...l, collapsed: !l.collapsed } : l)));
-  }
-
-  /* ===== Phase dates ===== */
-  function updatePhaseDate(phaseName, field, value) {
-    setPhaseList((p) => p.map((ph) => (ph.name === phaseName ? { ...ph, [field]: value } : ph)));
-  }
-
-  /* ===== Task operations ===== */
-  function addTask(lane, phase) {
-    setTasks((p) => {
-      const clone = deepClone(p);
-      clone[lane][phase].push({
-        label: "New Task",
-        status: "blue",
-        detail: "",
-        owner: "",
-        blocks: [],
-        blockedBy: [],
-      });
-      return normalizeDependencies(clone);
-    });
-  }
-
-  function updateTask(lane, phase, index, updates) {
-    setTasks((p) => {
-      const clone = deepClone(p);
-      clone[lane][phase][index] = { ...clone[lane][phase][index], ...updates };
-      return normalizeDependencies(clone);
-    });
-  }
-
-  function deleteTask(lane, phase, index) {
-    setTasks((p) => {
-      const base = deepClone(p);
-
-      // Remove the task
-      base[lane][phase].splice(index, 1);
-
-      // After delete, IDs in this cell shift => we must remap dependencies
-      // We do this by rebuilding a fresh ID map based on new indices.
-      const rebuilt = reindexAndRemap(base);
-
-      return rebuilt;
-    });
-
-    // Clear selection (safe)
-    setSelectedTask(null);
-  }
-
-  /* ===== Dependency edit helpers (reciprocal) ===== */
-  function linkDependency(fromId, toId, type) {
-    // type: "blocks" means from blocks to; "blockedBy" means from is blocked by to
-    if (!fromId || !toId || fromId === toId) return;
-
-    setTasks((p) => {
-      const clone = deepClone(p);
-      const index = buildDependencyIndex(clone);
-      const from = index[fromId];
-      const to = index[toId];
-      if (!from || !to) return clone;
-
-      if (type === "blocks") {
-        from.blocks = Array.from(new Set([...(from.blocks || []), toId]));
-        to.blockedBy = Array.from(new Set([...(to.blockedBy || []), fromId]));
-      } else {
-        from.blockedBy = Array.from(new Set([...(from.blockedBy || []), toId]));
-        to.blocks = Array.from(new Set([...(to.blocks || []), fromId]));
-      }
-      return normalizeDependencies(clone);
-    });
-  }
-
-  function unlinkDependency(fromId, toId, type) {
-    setTasks((p) => {
-      const clone = deepClone(p);
-      const index = buildDependencyIndex(clone);
-      const from = index[fromId];
-      const to = index[toId];
-      if (!from || !to) return clone;
-
-      if (type === "blocks") {
-        from.blocks = (from.blocks || []).filter((id) => id !== toId);
-        to.blockedBy = (to.blockedBy || []).filter((id) => id !== fromId);
-      } else {
-        from.blockedBy = (from.blockedBy || []).filter((id) => id !== toId);
-        to.blocks = (to.blocks || []).filter((id) => id !== fromId);
-      }
-      return normalizeDependencies(clone);
-    });
-  }
-
-  /* ===== Import / Export ===== */
-  function exportJSON() {
-    const data = {
-      project,
-      tier,
-      lanes: laneList,
-      phases: phaseList,
-      tasks,
-      overrideReason,
-      generated,
-      version: 1,
-      exportedAt: new Date().toISOString(),
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${(project?.name || "ocm-map").replace(/[^\w\- ]+/g, "").trim() || "ocm-map"}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  function importJSON(file) {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = JSON.parse(e.target.result);
-
-        const lanesIn = Array.isArray(data.lanes)
-          ? data.lanes
-          : (data.lanes || []).map((name, i) => ({
-              name,
-              color: LANE_PALETTE[i % LANE_PALETTE.length],
-              visible: true,
-              collapsed: false,
-            }));
-
-        const phasesIn = Array.isArray(data.phases)
-          ? data.phases
-          : (data.phases || []).map((name) => ({ name, start: "", end: "" }));
-
-        setLaneList(lanesIn);
-        setPhaseList(phasesIn);
-
-        const shaped = ensureTaskShape(data.tasks || {}, lanesIn, phasesIn);
-        setTasks(normalizeDependencies(shaped));
-        setSelectedTask(null);
-      } catch (err) {
-        alert("Invalid JSON file.");
-      }
-    };
-    reader.readAsText(file);
-  }
-
-  /* ===== Derived ===== */
-  const visibleLanes = useMemo(() => laneList.filter((l) => l.visible), [laneList]);
-
-  /* =========================================================
-     UI components
-     ========================================================= */
-
-  function LeftSidebar() {
-    const [newLane, setNewLane] = useState("");
-
-    if (leftRail) {
-      return (
-        <div className="leftSide rail">
-          <div className="leftRailIcon" onClick={() => setLeftRail(false)} title="Expand">
-            ›
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="leftSide">
-        <div className="leftSideHeader">
-          <strong>Controls</strong>
-          <button className="btn btn-dark-ghost" onClick={() => setLeftRail(true)}>
-            Collapse
-          </button>
-        </div>
-
-        <div className="leftTabs">
-          <button
-            className="btn btn-dark-chip"
-            style={{ flex: 1, background: activeLeftTab === "workstreams" ? "rgba(255,255,255,.08)" : "transparent" }}
-            onClick={() => setActiveLeftTab("workstreams")}
-          >
-            Workstreams
-          </button>
-          <button
-            className="btn btn-dark-chip"
-            style={{ flex: 1, background: activeLeftTab === "dependencies" ? "rgba(255,255,255,.08)" : "transparent" }}
-            onClick={() => setActiveLeftTab("dependencies")}
-          >
-            Dependencies
-          </button>
-        </div>
-
-        <div style={{ flex: 1, overflow: "auto", padding: 12 }}>
-          {activeLeftTab === "workstreams" && (
-            <>
-              {laneList.map((l) => (
-                <div key={l.name} className="laneRow" style={{ borderLeftColor: l.color }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                    <input type="checkbox" className="chk" checked={l.visible} onChange={() => toggleLaneVisibility(l.name)} />
-                    <span style={{ fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l.name}</span>
-                  </div>
-                  <div className="laneRowRight">
-                    <button className="iconBtn danger" onClick={() => deleteLane(l.name)} title="Delete">
-                      ✕
-                    </button>
-                  </div>
-                </div>
-              ))}
-
-              <div style={{ marginTop: 14 }}>
-                <input
-                  className="inp"
-                  placeholder="Add workstream"
-                  value={newLane}
-                  onChange={(e) => setNewLane(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      addLane(newLane);
-                      setNewLane("");
-                    }
-                  }}
-                />
-              </div>
-            </>
-          )}
-
-          {activeLeftTab === "dependencies" && (
-            <>
-              {!selectedTask && <div style={{ color: "#94a3b8", fontSize: 13 }}>Select a task to view its dependency chain.</div>}
-              {selectedTask && (
-                <>
-                  <DependencyChain type="upstream" />
-                  <DependencyChain type="selected" />
-                  <DependencyChain type="downstream" />
-                </>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  function DependencyChain({ type }) {
-    const id = selectedTask;
-    const upstream = getUpstreamChain(id, tasks);
-    const downstream = getDownstreamChain(id, tasks);
-
-    let list = [];
-    let title = "";
-    if (type === "upstream") {
-      list = upstream;
-      title = "Upstream";
-    }
-    if (type === "selected") {
-      list = [id];
-      title = "Selected";
-    }
-    if (type === "downstream") {
-      list = downstream;
-      title = "Downstream";
-    }
-
-    return (
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontFamily: "var(--mono)", fontSize: 11, letterSpacing: ".08em", marginBottom: 6, color: "#94a3b8" }}>
-          {title.toUpperCase()}
-        </div>
-
-        {list.length === 0 && type !== "selected" && <div style={{ fontSize: 13, color: "#64748b" }}>None</div>}
-
-        {list.map((taskId) => {
-          const t = getTaskById(taskId);
-          if (!t) return null;
-          const { lane, phase } = parseTaskId(taskId);
-          return (
-            <div
-              key={taskId}
-              style={{
-                padding: "8px 10px",
-                borderRadius: 10,
-                background: "rgba(255,255,255,.06)",
-                marginBottom: 6,
-                cursor: "pointer",
-              }}
-              onClick={() => setSelectedTask(taskId)}
-            >
-              <div style={{ fontWeight: 800, fontSize: 13 }}>{t.label}</div>
-              <div style={{ fontSize: 11, color: "#94a3b8" }}>
-                {lane} · {phase}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
-
-  function PhaseHeader({ phase, index }) {
-    const [open, setOpen] = useState(false);
-    const popRef = useRef(null);
-
-    useEffect(() => {
-      function onDoc(e) {
-        if (!open) return;
-        if (popRef.current && !popRef.current.contains(e.target)) setOpen(false);
-      }
-      document.addEventListener("mousedown", onDoc);
-      return () => document.removeEventListener("mousedown", onDoc);
-    }, [open]);
-
-    return (
-      <div className="phaseHeaderCell">
-        <div className="card" style={{ padding: 10, position: "relative" }}>
-          <div style={{ fontFamily: "var(--mono)", fontSize: 11, letterSpacing: ".08em", color: "#94a3b8" }}>PHASE</div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-            <strong style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{phase.name}</strong>
-            {!executiveMode && (
-              <button className="iconBtn" onClick={() => setOpen((o) => !o)} title="Edit phase dates">
-                📅
-              </button>
-            )}
-          </div>
-
-          {!executiveMode && open && (
-            <div className="pop" ref={popRef}>
-              <label className="lbl">Start date</label>
-              <input type="date" className="inp" value={phase.start} onChange={(e) => updatePhaseDate(phase.name, "start", e.target.value)} />
-              <label className="lbl" style={{ marginTop: 10 }}>
-                End date
-              </label>
-              <input type="date" className="inp" value={phase.end} onChange={(e) => updatePhaseDate(phase.name, "end", e.target.value)} />
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  function TaskCard({ lane, phase, task, index }) {
-    const meta = STATUS_META[task.status] || STATUS_META.blue;
-    return (
-      <div className="taskCard" onClick={() => setSelectedTask(getTaskId(lane, phase, index))}>
-        <div className="taskBorder" style={{ background: meta.color }} />
-        <div className="taskInner">
-          <div className="taskTitle">{task.label}</div>
-          <div className="taskMeta">
-            {meta.label}
-            {task.owner ? ` · ${task.owner}` : ""}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  function Drawer() {
-    if (executiveMode) return null;
-
-    if (rightRail) {
-      return (
-        <div className="drawer rail">
-          <div className="leftRailIcon" onClick={() => setRightRail(false)} title="Expand">
-            ‹
-          </div>
-        </div>
-      );
-    }
-
-    if (!selectedTask) {
-      return (
-        <div className="drawer">
-          <div className="drawerHeader">
-            <strong>Task Details</strong>
-            <button className="btn btn-secondary" onClick={() => setRightRail(true)}>
-              Collapse
-            </button>
-          </div>
-          <div className="drawerBody" style={{ color: "#64748b" }}>
-            Select a task to edit.
-          </div>
-        </div>
-      );
-    }
-
-    const { lane, phase, idx } = parseTaskId(selectedTask);
-    const task = tasks?.[lane]?.[phase]?.[idx];
-    if (!task) return null;
-
-    const candidates = allTaskIds.filter((id) => id !== selectedTask);
-
-    return (
-      <div className="drawer">
-        <div className="drawerHeader">
-          <strong>Edit Task</strong>
-          <button className="btn btn-secondary" onClick={() => setRightRail(true)}>
-            Collapse
-          </button>
-        </div>
-
-        <div className="drawerBody">
-          <label className="lbl">Title</label>
-          <input className="inp" value={task.label} onChange={(e) => updateTask(lane, phase, idx, { label: e.target.value })} />
-
-          <label className="lbl" style={{ marginTop: 12 }}>
-            Owner
-          </label>
-          <input className="inp" value={task.owner} onChange={(e) => updateTask(lane, phase, idx, { owner: e.target.value })} />
-
-          <label className="lbl" style={{ marginTop: 12 }}>
-            Status
-          </label>
-          <select className="inp" value={task.status} onChange={(e) => updateTask(lane, phase, idx, { status: e.target.value })}>
-            {Object.keys(STATUS_META).map((k) => (
-              <option key={k} value={k}>
-                {STATUS_META[k].label}
-              </option>
-            ))}
-          </select>
-
-          <label className="lbl" style={{ marginTop: 12 }}>
-            Detail
-          </label>
-          <textarea className="inp" value={task.detail} onChange={(e) => updateTask(lane, phase, idx, { detail: e.target.value })} />
-
-          {/* Dependencies */}
-          <div style={{ marginTop: 14 }} className="card">
-            <div style={{ padding: 12 }}>
-              <div className="lbl" style={{ marginBottom: 10 }}>
-                Dependencies
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 10 }}>
-                <div>
-                  <div style={{ fontFamily: "var(--mono)", fontSize: 11, fontWeight: 900, color: "#64748b", marginBottom: 6 }}>
-                    BLOCKED BY
-                  </div>
-                  {(task.blockedBy || []).length === 0 ? (
-                    <div style={{ fontSize: 13, color: "#64748b" }}>None</div>
-                  ) : (
-                    (task.blockedBy || []).map((id) => {
-                      const t2 = getTaskById(id);
-                      if (!t2) return null;
-                      const loc = parseTaskId(id);
-                      return (
-                        <div key={id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "8px 10px", borderRadius: 12, background: "#fff", border: "1px solid var(--border)", marginBottom: 6 }}>
-                          <div style={{ minWidth: 0, cursor: "pointer" }} onClick={() => setSelectedTask(id)} title="Go to task">
-                            <div style={{ fontWeight: 900, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t2.label}</div>
-                            <div style={{ fontSize: 11, color: "#64748b" }}>
-                              {loc.lane} · {loc.phase}
-                            </div>
-                          </div>
-                          <button className="iconBtn danger" title="Remove" onClick={() => unlinkDependency(selectedTask, id, "blockedBy")}>
-                            ✕
-                          </button>
-                        </div>
-                      );
-                    })
-                  )}
-
-                  <select
-                    className="inp"
-                    value=""
-                    onChange={(e) => {
-                      const id = e.target.value;
-                      if (!id) return;
-                      linkDependency(selectedTask, id, "blockedBy");
-                      e.target.value = "";
-                    }}
-                  >
-                    <option value="">+ Add blocker…</option>
-                    {candidates.map((id) => {
-                      const t2 = getTaskById(id);
-                      if (!t2) return null;
-                      const loc = parseTaskId(id);
-                      return (
-                        <option key={id} value={id}>
-                          {t2.label} — {loc.lane} / {loc.phase}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-
-                <div>
-                  <div style={{ fontFamily: "var(--mono)", fontSize: 11, fontWeight: 900, color: "#64748b", marginBottom: 6 }}>
-                    BLOCKS
-                  </div>
-                  {(task.blocks || []).length === 0 ? (
-                    <div style={{ fontSize: 13, color: "#64748b" }}>None</div>
-                  ) : (
-                    (task.blocks || []).map((id) => {
-                      const t2 = getTaskById(id);
-                      if (!t2) return null;
-                      const loc = parseTaskId(id);
-                      return (
-                        <div key={id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "8px 10px", borderRadius: 12, background: "#fff", border: "1px solid var(--border)", marginBottom: 6 }}>
-                          <div style={{ minWidth: 0, cursor: "pointer" }} onClick={() => setSelectedTask(id)} title="Go to task">
-                            <div style={{ fontWeight: 900, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t2.label}</div>
-                            <div style={{ fontSize: 11, color: "#64748b" }}>
-                              {loc.lane} · {loc.phase}
-                            </div>
-                          </div>
-                          <button className="iconBtn danger" title="Remove" onClick={() => unlinkDependency(selectedTask, id, "blocks")}>
-                            ✕
-                          </button>
-                        </div>
-                      );
-                    })
-                  )}
-
-                  <select
-                    className="inp"
-                    value=""
-                    onChange={(e) => {
-                      const id = e.target.value;
-                      if (!id) return;
-                      linkDependency(selectedTask, id, "blocks");
-                      e.target.value = "";
-                    }}
-                  >
-                    <option value="">+ Add blocked task…</option>
-                    {candidates.map((id) => {
-                      const t2 = getTaskById(id);
-                      if (!t2) return null;
-                      const loc = parseTaskId(id);
-                      return (
-                        <option key={id} value={id}>
-                          {t2.label} — {loc.lane} / {loc.phase}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div style={{ marginTop: 14, display: "flex", gap: 10 }}>
-            <button className="btn btn-danger" onClick={() => deleteTask(lane, phase, idx)}>
-              Delete Task
-            </button>
-            <button className="btn btn-secondary" onClick={() => setSelectedTask(null)}>
-              Close
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  function LaneHeader({ laneObj }) {
-    const [editing, setEditing] = useState(false);
-    const [draft, setDraft] = useState(laneObj.name);
-
-    useEffect(() => setDraft(laneObj.name), [laneObj.name]);
-
-    return (
-      <div className="laneHeaderCell card laneTile">
-        <div className="laneBar" style={{ background: laneObj.color }} />
-        <div style={{ minWidth: 0 }}>
-          {!editing ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ fontWeight: 900, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{laneObj.name}</div>
-              <button className="iconBtn" title="Rename" onClick={() => setEditing(true)}>
-                ✎
-              </button>
-            </div>
-          ) : (
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <input
-                className="inp"
-                style={{ padding: "8px 10px", height: 34 }}
-                value={draft}
-                autoFocus
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    renameLane(laneObj.name, draft);
-                    setEditing(false);
-                  }
-                  if (e.key === "Escape") {
-                    setDraft(laneObj.name);
-                    setEditing(false);
-                  }
-                }}
-              />
-              <button
-                className="iconBtn"
-                title="Save"
-                onClick={() => {
-                  renameLane(laneObj.name, draft);
-                  setEditing(false);
-                }}
-              >
-                ✓
-              </button>
-            </div>
-          )}
-        </div>
-
-        <button className="iconBtn" onClick={() => toggleLaneCollapse(laneObj.name)} title="Collapse/Expand lane">
-          {laneObj.collapsed ? "+" : "–"}
-        </button>
-      </div>
-    );
-  }
-
-  function Grid() {
-    return (
-      <div className="mainArea">
-        <div style={{ padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-          <div style={{ minWidth: 0 }}>
-            <strong style={{ display: "inline-block", maxWidth: 520, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {project?.name || "OCM Readiness Map"}
-            </strong>
-            <span style={{ marginLeft: 10, color: "#64748b" }}>{TIER_CFG[tier]?.label || ""}</span>
-          </div>
-
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-            <button className="btn btn-secondary" onClick={() => setExecutiveMode((e) => !e)}>
-              {executiveMode ? "Exit Executive View" : "Executive View"}
-            </button>
-            <button className="btn btn-secondary" onClick={exportJSON}>
-              Export
-            </button>
-            <label className="btn btn-secondary">
-              Import
-              <input type="file" accept=".json" style={{ display: "none" }} onChange={(e) => importJSON(e.target.files?.[0])} />
-            </label>
-          </div>
-        </div>
-
-        <div className="gridWrap">
-          <div className="mapGrid" style={{ gridTemplateColumns: `260px repeat(${phaseList.length}, minmax(260px,1fr))` }}>
-            {/* Header Row */}
-            <div className="laneHeaderCell card" style={{ padding: 10, fontWeight: 900 }}>
-              Workstream
-            </div>
-
-            {phaseList.map((p, i) => (
-              <PhaseHeader key={p.name} phase={p} index={i} />
-            ))}
-
-            {/* Rows */}
-            {visibleLanes.map((l) => (
-              <React.Fragment key={l.name}>
-                <LaneHeader laneObj={l} />
-
-                {phaseList.map((p, pi) => (
-                  <div key={p.name} className={`phaseCell ${pi % 2 === 1 ? "phaseStripe" : ""}`} style={{ padding: 6 }}>
-                    {!l.collapsed && (
-                      <>
-                        {(tasks?.[l.name]?.[p.name] || []).map((t, i) => (
-                          <div key={i} style={{ marginBottom: 8 }}>
-                            <TaskCard lane={l.name} phase={p.name} task={t} index={i} />
-                          </div>
-                        ))}
-                        <button className="btn btn-ghost" style={{ marginTop: 2 }} onClick={() => addTask(l.name, p.name)}>
-                          + Add Task
-                        </button>
-                      </>
-                    )}
-                  </div>
-                ))}
-              </React.Fragment>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="stage4Shell">
-      <LeftSidebar />
-      <Grid />
-      <Drawer />
     </div>
   );
 }
 
-/* =========================================================
-   App Root (Stages 1–4 + Autosave Restore)
-   ========================================================= */
-
-function App(){
-  const [stage,setStage] = useState(0);
-  const [apiKey,setApiKey] = useState(localStorage.getItem("anthropic_key") || "");
-
-  const [project,setProject] = useState({name:"",owner:"",date:"",description:""});
-  const [scores,setScores] = useState(null);
-  const [suggestedTier,setSuggestedTier] = useState(2);
-
-  const [tier,setTier] = useState(2);
-  const [lanes,setLanes] = useState([]);
-  const [phases,setPhases] = useState([]);
-  const [tasks,setTasks] = useState({});
-  const [overrideReason,setOverrideReason] = useState("");
-  const [generated,setGenerated] = useState(false);
-
-  /* Restore autosave on load */
-  useEffect(()=>{
-    try{
-      const raw = localStorage.getItem("ocm_map_autosave");
-      if(!raw) return;
-      const data = JSON.parse(raw);
-
-      if(data?.project?.name || data?.tasks){
-        setProject(data.project || project);
-        setTier(data.tier || 2);
-        setSuggestedTier(data.tier || 2);
-        // lanes/phases may be saved as objects (v1) — Stage4Fixed accepts lanes as array of names for props,
-        // but we pass names arrays here and Stage4Fixed uses them to initialize laneList/phaseList.
-        const laneNames = Array.isArray(data.lanes) ? data.lanes.map(l=>l.name || l).filter(Boolean) : [];
-        const phaseNames = Array.isArray(data.phases) ? data.phases.map(p=>p.name || p).filter(Boolean) : [];
-        setLanes(laneNames);
-        setPhases(phaseNames);
-        setTasks(data.tasks || {});
-        setOverrideReason(data.overrideReason || "");
-        setGenerated(!!data.generated);
-        setStage(3);
-      }
-    }catch(_){}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[]);
-
-  useEffect(()=>{
-    localStorage.setItem("anthropic_key", apiKey);
-  },[apiKey]);
-
-  function resetAll(){
-    if(!confirm("Reset and clear autosave?")) return;
-    localStorage.removeItem("ocm_map_autosave");
-    setStage(0);
-    setProject({name:"",owner:"",date:"",description:""});
-    setScores(null);
-    setSuggestedTier(2);
-    setTier(2);
-    setLanes([]);
-    setPhases([]);
-    setTasks({});
-    setOverrideReason("");
-    setGenerated(false);
-  }
-
-  return(
-    <div style={{height:"100%",display:"flex",flexDirection:"column",minHeight:0}}>
-      {/* Top Bar */}
-      <div className="appTopBar">
-        <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
-          <div style={{fontFamily:"var(--serif)",fontSize:18,fontWeight:700,whiteSpace:"nowrap"}}>OCM Readiness Map Builder</div>
-          <span className="subtle" style={{fontFamily:"var(--mono)",fontSize:12,letterSpacing:".06em"}}>SINGLE-FILE · LOCAL</span>
-        </div>
-
-        <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",justifyContent:"flex-end"}}>
-          <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <span className="subtle" style={{fontFamily:"var(--mono)",fontSize:12}}>Anthropic Key</span>
-            <input
-              className="inp"
-              style={{width:260,padding:"8px 10px",height:36}}
-              placeholder="sk-ant-…"
-              value={apiKey}
-              onChange={e=>setApiKey(e.target.value)}
-            />
-          </div>
-
-          <button className="btn btn-dark-ghost" onClick={()=>{ClickAudio.click(); resetAll();}}>
-            Reset
-          </button>
-        </div>
-      </div>
-
-      {/* Body */}
-      <div style={{flex:1,minHeight:0,overflow:"auto",padding:18}}>
-        {stage < 3 && (
-          <div style={{maxWidth:980,margin:"0 auto"}}>
-            <Steps current={stage}/>
-            <div className="card" style={{padding:18}}>
-              {stage===0 && (
-                <Stage1 onNext={(proj)=>{
-                  setProject(proj);
-                  setStage(1);
-                }}/>
-              )}
-              {stage===1 && (
-                <Stage2
-                  project={project}
-                  onNext={(sc,t)=>{
-                    setScores(sc);
-                    setSuggestedTier(t);
-                    setStage(2);
-                  }}
-                />
-              )}
-              {stage===2 && (
-                <Stage3
-                  project={project}
-                  suggestedTier={suggestedTier}
-                  apiKey={apiKey}
-                  onNext={(tierPicked, laneArr, phaseArr, tasksObj, override, wasGenerated)=>{
-                    setTier(tierPicked);
-                    setLanes(laneArr);
-                    setPhases(phaseArr);
-                    setTasks(tasksObj);
-                    setOverrideReason(override || "");
-                    setGenerated(!!wasGenerated);
-                    setStage(3);
-                  }}
-                />
-              )}
-            </div>
-          </div>
-        )}
-
-        {stage===3 && (
-          <div style={{height:"calc(100vh - 92px)",minHeight:520}}>
-            <Stage4Fixed
-              project={project}
-              tier={tier}
-              lanes={lanes}
-              phases={phases}
-              initialTasks={tasks}
-              overrideReason={overrideReason}
-              generated={generated}
-              apiKey={apiKey}
-            />
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 </script>
-
 </body>
 </html>
