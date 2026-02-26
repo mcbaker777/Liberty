@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Readiness Map Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --navy:#0f1e35;--ink:#1a2840;--blue:#1d6ef5;--teal:#0d9488;
+  --amber:#d97706;--red:#dc2626;--orange:#ea580c;--green:#059669;
+  --slate:#64748b;--border:#e2e8f0;--off:#f8fafc;--white:#ffffff;
+  --serif:'DM Serif Display',Georgia,serif;
+  --sans:'DM Sans',system-ui,sans-serif;
+  --mono:'JetBrains Mono',monospace;
+}
+html,body,#root{height:100%;}
+body{font-family:var(--sans);font-size:16px;background:var(--off);color:var(--ink);}
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:#f1f5f9;}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes popUp{0%{transform:translateY(100%);opacity:0}100%{transform:translateY(0);opacity:1}}
+.fade-up{animation:fadeUp .35s ease both}
+.slide-in{animation:slideIn .28s ease both}
+.btn{display:inline-flex;align-items:center;gap:6px;font-family:var(--sans);font-size:14px;font-weight:600;border:none;border-radius:6px;cursor:pointer;padding:8px 16px;transition:all .14s;line-height:1;}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-primary:hover{background:#1558d0;transform:translateY(-1px);box-shadow:0 4px 12px rgba(29,110,245,.28)}
+.btn-secondary{background:#fff;color:var(--ink);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--off)}
+.btn-ghost{background:transparent;color:var(--slate);padding:6px 10px}
+.btn-ghost:hover{background:#f1f5f9;color:var(--ink)}
+.btn-danger{background:#fff;color:var(--red);border:1px solid #fecaca}
+.btn-danger:hover{background:#fef2f2}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important;box-shadow:none!important}
+.card{background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.inp{width:100%;font-family:var(--sans);font-size:15px;border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--ink);background:#fff;transition:border-color .14s;outline:none;}
+.inp:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(29,110,245,.1)}
+textarea.inp{resize:vertical;min-height:80px}
+.lbl{display:block;font-size:12px;font-weight:700;letter-spacing:.065em;color:var(--slate);text-transform:uppercase;margin-bottom:6px;font-family:var(--mono);}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;letter-spacing:.05em;padding:3px 9px;border-radius:20px;font-family:var(--mono);}
+</style>
+</head>
+<body><div id="root"></div>
+<script type="text/babel">
+const {useState,useRef,useEffect}=React;
+const LANE_PALETTE=["#1d6ef5","#0d9488","#7c3aed","#dc2626","#ea580c","#d97706","#059669","#0891b2","#db2777","#64748b"];
+const STATUS_META={
+  green:{label:"On Track",color:"#059669",bg:"#f0fdf4",dot:"#22c55e"},
+  blue:{label:"Planned",color:"#1d6ef5",bg:"#eff6ff",dot:"#60a5fa"},
+  amber:{label:"At Risk",color:"#d97706",bg:"#fffbeb",dot:"#fbbf24"},
+  orange:{label:"Issue",color:"#ea580c",bg:"#fff7ed",dot:"#fb923c"},
+  red:{label:"Critical",color:"#dc2626",bg:"#fef2f2",dot:"#f87171"},
+  blocked:{label:"Blocked",color:"#7c3aed",bg:"#faf5ff",dot:"#a78bfa"},
+};
+const DIMENSIONS=[
+  {id:"org",label:"Organizational Impact",question:"How many departments, functions, or regions are affected?",
+    opts:[{v:1,l:"Single team or department"},{v:2,l:"Cross-functional or regional"},{v:3,l:"Enterprise-wide or multi-entity"}]},
+  {id:"users",label:"User Impact",question:"How many users are impacted?",
+    opts:[{v:1,l:"Fewer than 100 users"},{v:2,l:"100–999 users"},{v:3,l:"1,000+ users or customer-facing"}]},
+  {id:"process",label:"Process / System Change",question:"Does it change core processes or systems?",
+    opts:[{v:1,l:"Minor enhancements only"},{v:2,l:"Updates or modifies existing systems"},{v:3,l:"Redesigns core processes or introduces major new technology"}]},
+  {id:"risk",label:"Risk Level",question:"What is the likelihood and consequence of failure?",
+    opts:[{v:1,l:"Low risk — minimal consequences"},{v:2,l:"Moderate risk"},{v:3,l:"High risk — regulatory, financial, or reputational exposure",esc:true}]},
+  {id:"leadership",label:"Leadership Visibility",question:"Is this tracked at the executive level?",
+    opts:[{v:1,l:"Managed entirely at team level"},{v:2,l:"Oversight by Director or functional head"},{v:3,l:"Executive-sponsored or Board-level"}]},
+  {id:"readiness",label:"Change Readiness",question:"Is there known resistance or lack of capacity?",
+    opts:[{v:1,l:"High readiness — team is prepared and willing"},{v:2,l:"Mixed readiness — some concerns"},{v:3,l:"Low readiness or high resistance",esc:true}]},
+  {id:"timeline",label:"Timeline & Complexity",question:"How long and complex is the delivery?",
+    opts:[{v:1,l:"Less than 3 months"},{v:2,l:"3–6 months — staged delivery"},{v:3,l:"6+ months — multi-phase program"}]},
+];
+const TIER_CFG={
+  1:{label:"Tier 1",sub:"High Complexity / High Impact",color:"#1d6ef5",bg:"#eff6ff",bdr:"#bfdbfe",
+     desc:"Full OCM engagement — structured communications, training, sponsorship, coaching, and adoption metrics across the full lifecycle.",
+     phases:["Targeting","Mobilization","Readiness","Day-1 / Go-Live","Stabilization","TSA / Sustainment"],
+     lanes:["Stakeholder & Comms","Training & Enablement","Readiness & Risk","Technical / Systems","Leadership & Sponsorship"],
+     deliverables:["Stakeholder Map","Change Impact Analysis","Full OCM Plan","Comms Strategy","Training Program","Readiness Assessments","Adoption Metrics","Resistance Management","Lessons Learned"],
+     statuses:["green","blue","amber","orange","red","blocked"]},
+  2:{label:"Tier 2",sub:"Moderate Complexity / Targeted Impact",color:"#0d9488",bg:"#f0fdfa",bdr:"#99f6e4",
+     desc:"Targeted OCM support at key milestones — readiness assessment, key communications, training deliverables, and stakeholder engagement.",
+     phases:["Planning","Execution","Go-Live","Sustainment"],
+     lanes:["Stakeholder & Comms","Training & Enablement","Readiness & Risk"],
+     deliverables:["Lightweight CM Plan","Stakeholder List","Comms Plan","Training Summary","Pulse Checks","Lessons Learned"],
+     statuses:["green","blue","amber","red"]},
+  3:{label:"Tier 3",sub:"Low Complexity / Limited Impact",color:"#64748b",bg:"#f8fafc",bdr:"#e2e8f0",
+     desc:"Light-touch support — self-service materials, templates, and optional PM-led communications with OCM check-in as needed.",
+     phases:["Setup","Delivery","Close"],
+     lanes:["Key Actions"],
+     deliverables:["Stakeholder Notification","Quick Reference Guide","Go/No-Go Checklist"],
+     statuses:["green","amber","red"]},
+};
+function getTier(sc){
+  const total=Object.values(sc).reduce((a,b)=>a+b,0);
+  const esc=DIMENSIONS.some(d=>d.opts.find(o=>o.v===sc[d.id])?.esc);
+  return (esc||total>=20)?1:total>=14?2:3;
+}
+async function callClaude(userMsg, apiKey){
+  const res=await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true"
+    },
+    body:JSON.stringify({
+      model:"claude-sonnet-4-5",
+      max_tokens:1500,
+      system:"You are an expert OCM strategist. Return ONLY valid JSON — no markdown, no explanation, no backticks.",
+      messages:[{role:"user",content:userMsg}]
+    })
+  });
+  if(!res.ok){const e=await res.json();throw new Error(e.error?.message||`HTTP ${res.status}`);}
+  const data=await res.json();
+  const raw=(data.content||[]).map(c=>c.text||"").join("").trim();
+  const clean=raw.replace(/^```json\s*/,"").replace(/^```\s*/,"").replace(/\s*```$/,"").trim();
+  return JSON.parse(clean);
+}
+/* ── Steps ── */
+function Steps({current}){
+  const steps=["Project Info","Tiering","Configure","Build Map"];
+  return(
+    <div style={{display:"flex",alignItems:"center",marginBottom:32}}>
+      {steps.map((s,i)=>{
+        const done=i<current,active=i===current;
+        return(<React.Fragment key={i}>
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:5}}>
+            <div style={{width:32,height:32,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,transition:"all .2s",
+              background:done?"#059669":active?"#1d6ef5":"#fff",
+              border:`2px solid ${done?"#059669":active?"#1d6ef5":"#e2e8f0"}`,
+              color:(done||active)?"#fff":"#94a3b8"}}>{done?"✓":i+1}</div>
+            <span style={{fontSize:13,fontWeight:active?700:500,color:active?"#1d6ef5":done?"#059669":"#94a3b8",whiteSpace:"nowrap"}}>{s}</span>
+          </div>
+          {i<steps.length-1&&<div style={{flex:1,height:2,margin:"0 8px",marginBottom:22,background:done?"#059669":"#e2e8f0",transition:"background .3s"}}/>}
+        </React.Fragment>);
+      })}
+    </div>
+  );
+}
+/* ── Stage 1 ── */
+function Stage1({onNext}){
+  const [f,setF]=useState({name:"",owner:"",date:"",description:"",workstreams:""});
+  const ok=f.name.trim()&&f.description.trim();
+  const set=k=>e=>setF(p=>({...p,[k]:e.target.value}));
+  return(
+    <div className="fade-up">
+      <h2 style={{fontFamily:"var(--serif)",fontSize:28,color:"var(--navy)",marginBottom:6}}>Tell us about your initiative</h2>
+      <p style={{fontSize:15,color:"var(--slate)",marginBottom:24,lineHeight:1.6}}>This anchors the readiness map and informs AI-generated content.</p>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
+        <div><label className="lbl">Initiative / Project Name *</label><input className="inp" placeholder="e.g. Project Liberty" value={f.name} onChange={set("name")}/></div>
+        <div><label className="lbl">OCM Lead / Owner</label><input className="inp" placeholder="e.g. Matthew Baker" value={f.owner} onChange={set("owner")}/></div>
+        <div><label className="lbl">Target Go-Live Date</label><input className="inp" type="date" value={f.date} onChange={set("date")}/></div>
+        <div><label className="lbl">Primary Workstreams (comma-separated)</label><input className="inp" placeholder="e.g. Identity & Access, Corporate Apps" value={f.workstreams} onChange={set("workstreams")}/></div>
+      </div>
+      <div style={{marginBottom:24}}>
+        <label className="lbl">Brief Initiative Description *</label>
+        <textarea className="inp" placeholder="What is changing? Who is affected? What does success look like?" value={f.description} onChange={set("description")}/>
+      </div>
+      <div style={{display:"flex",justifyContent:"flex-end"}}>
+        <button className="btn btn-primary" disabled={!ok} onClick={()=>onNext(f)}>Continue to Tiering →</button>
+      </div>
+    </div>
+  );
+}
+/* ── Stage 2 ── */
+function Stage2({project,onNext}){
+  const [sc,setSc]=useState({});
+  const done=DIMENSIONS.every(d=>sc[d.id]!==undefined);
+  const total=Object.values(sc).reduce((a,b)=>a+b,0);
+  const tier=done?getTier(sc):null;
+  const esc=done&&DIMENSIONS.some(d=>d.opts.find(o=>o.v===sc[d.id])?.esc);
+  const cfg=tier?TIER_CFG[tier]:null;
+  return(
+    <div className="fade-up">
+      <h2 style={{fontFamily:"var(--serif)",fontSize:28,color:"var(--navy)",marginBottom:6}}>Tiering Assessment</h2>
+      <p style={{fontSize:15,color:"var(--slate)",marginBottom:24,lineHeight:1.6}}>Answer each question to determine the right OCM engagement level for <strong>{project.name}</strong>.</p>
+      <div style={{display:"flex",flexDirection:"column",gap:12,marginBottom:24}}>
+        {DIMENSIONS.map((dim,di)=>(
+          <div key={dim.id} className="card slide-in" style={{padding:"16px 20px",animationDelay:`${di*.04}s`}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+              <div>
+                <div style={{fontSize:11,fontWeight:700,letterSpacing:".07em",color:"var(--slate)",fontFamily:"var(--mono)",marginBottom:3}}>
+                  {String(di+1).padStart(2,"0")} / {String(DIMENSIONS.length).padStart(2,"0")} · {dim.label.toUpperCase()}
+                </div>
+                <div style={{fontSize:15,fontWeight:600,color:"var(--navy)"}}>{dim.question}</div>
+              </div>
+              {sc[dim.id]&&<span style={{fontSize:11,fontFamily:"var(--mono)",fontWeight:700,padding:"3px 8px",borderRadius:3,
+                background:sc[dim.id]===3?"#fef2f2":sc[dim.id]===2?"#fffbeb":"#f0fdf4",
+                color:sc[dim.id]===3?"var(--red)":sc[dim.id]===2?"var(--amber)":"var(--green)"}}>
+                {sc[dim.id]===3?"HIGH":sc[dim.id]===2?"MED":"LOW"}</span>}
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {dim.opts.map(opt=>(
+                <label key={opt.v} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 13px",borderRadius:6,cursor:"pointer",transition:"all .13s",
+                  border:`1px solid ${sc[dim.id]===opt.v?(opt.esc?"var(--red)":"var(--blue)"):"var(--border)"}`,
+                  background:sc[dim.id]===opt.v?(opt.esc?"#fef2f2":"#eff6ff"):"var(--off)"}}>
+                  <input type="radio" name={dim.id} value={opt.v} checked={sc[dim.id]===opt.v}
+                    onChange={()=>setSc(p=>({...p,[dim.id]:opt.v}))} style={{accentColor:opt.esc?"var(--red)":"var(--blue)"}}/>
+                  <span style={{fontSize:14,color:"var(--ink)"}}>{opt.l}</span>
+                  {opt.esc&&sc[dim.id]===opt.v&&<span style={{marginLeft:"auto",fontSize:10,fontFamily:"var(--mono)",fontWeight:700,color:"var(--red)",background:"#fee2e2",padding:"2px 6px",borderRadius:3}}>AUTO-ESCALATE</span>}
+                </label>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      {done&&(
+        <div className="fade-up card" style={{marginBottom:24}}>
+          <div style={{padding:"16px 20px",borderBottom:"1px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div>
+              <div style={{fontSize:11,fontWeight:700,letterSpacing:".07em",color:"var(--slate)",fontFamily:"var(--mono)"}}>ASSESSMENT RESULT</div>
+              <div style={{fontFamily:"var(--serif)",fontSize:22,color:cfg.color,marginTop:3}}>{cfg.label} — {cfg.sub}</div>
+            </div>
+            <div style={{textAlign:"right"}}>
+              <div style={{fontSize:11,color:"var(--slate)",fontFamily:"var(--mono)"}}>TOTAL SCORE</div>
+              <div style={{fontSize:34,fontWeight:700,fontFamily:"var(--mono)",color:"var(--navy)"}}>{total}<span style={{fontSize:16,color:"var(--slate)"}}>/21</span></div>
+            </div>
+          </div>
+          <div style={{padding:"14px 20px",background:cfg.bg,display:"flex",gap:12,alignItems:"flex-start"}}>
+            <div style={{fontSize:20}}>{tier===1?"🔴":tier===2?"🟡":"🟢"}</div>
+            <div>
+              <div style={{fontSize:14,color:"var(--ink)",lineHeight:1.65}}>{cfg.desc}</div>
+              {esc&&<div style={{marginTop:7,fontSize:13,fontWeight:700,color:"var(--red)",fontFamily:"var(--mono)"}}>⚠ Auto-escalation triggered</div>}
+            </div>
+          </div>
+        </div>
+      )}
+      <div style={{display:"flex",justifyContent:"flex-end"}}>
+        <button className="btn btn-primary" disabled={!done} onClick={()=>onNext(sc,tier)}>Review & Configure Map →</button>
+      </div>
+    </div>
+  );
+}
+/* ── Stage 3 ── */
+function Stage3({project,suggestedTier,apiKey,onNext}){
+  const [tier,setTier]=useState(suggestedTier);
+  const [override,setOverride]=useState("");
+  const [lanes,setLanes]=useState(TIER_CFG[suggestedTier].lanes.join("\n"));
+  const [phases,setPhases]=useState(TIER_CFG[suggestedTier].phases.join("\n"));
+  const [gen,setGen]=useState(false);
+  const [err,setErr]=useState(null);
+  const cfg=TIER_CFG[tier];
+  const laneArr=lanes.split("\n").map(s=>s.trim()).filter(Boolean);
+  const phaseArr=phases.split("\n").map(s=>s.trim()).filter(Boolean);
+  const changeTier=t=>{setTier(t);setLanes(TIER_CFG[t].lanes.join("\n"));setPhases(TIER_CFG[t].phases.join("\n"));};
+  const emptyTasks=()=>{const t={};laneArr.forEach(l=>{t[l]={};phaseArr.forEach(p=>{t[l][p]=[];});});return t;};
+  const generate=async()=>{
+    if(!apiKey.trim()){setErr("Please enter your Anthropic API key in the top bar before generating.");return;}
+    setGen(true);setErr(null);
+    try{
+      const ws=project.workstreams?project.workstreams.split(",").map(s=>s.trim()).filter(Boolean):laneArr;
+      const prompt=`Generate a readiness map for this OCM initiative.
+Name: ${project.name}
+Description: ${project.description}
+Tier: ${tier} (${cfg.sub})
+Phases: ${phaseArr.join(", ")}
+Lanes (workstreams): ${laneArr.join(", ")}
+Workstreams context: ${ws.join(", ")}
+Return ONLY this JSON structure, nothing else:
+{"tasks":{"LANE_NAME":{"PHASE_NAME":[{"label":"short task name under 6 words","status":"blue","type":"standard","detail":"2-3 sentence description of this task and what completion looks like."}]}}}
+Important rules:
+- Replace LANE_NAME with actual lane names from the list above
+- Replace PHASE_NAME with actual phase names from the list above
+- status must be one of: ${cfg.statuses.join(", ")}
+- type must be one of: standard, precondition, handoff
+- Include 1-3 tasks per lane per phase
+- Tasks must be realistic OCM activities for a ${cfg.sub} initiative
+- Precondition tasks block downstream work; handoff tasks transfer work between teams`;
+      const result=await callClaude(prompt, apiKey);
+      setGen(false);
+      onNext(tier,laneArr,phaseArr,result.tasks,override);
+    } catch(e){
+      setGen(false);
+      setErr(`Generation failed: ${e.message}. You can start with an empty map and add tasks manually.`);
+    }
+  };
+  return(
+    <div className="fade-up">
+      <h2 style={{fontFamily:"var(--serif)",fontSize:28,color:"var(--navy)",marginBottom:6}}>Review & Configure</h2>
+      <p style={{fontSize:15,color:"var(--slate)",marginBottom:24,lineHeight:1.6}}>Confirm the tier, customize lanes and phases, then generate with AI or start manually.</p>
+      <div style={{marginBottom:20}}>
+        <label className="lbl">Confirmed Tier</label>
+        <div style={{display:"flex",gap:12}}>
+          {[1,2,3].map(t=>(
+            <button key={t} onClick={()=>changeTier(t)} style={{flex:1,padding:"12px 16px",borderRadius:8,cursor:"pointer",
+              border:`2px solid ${tier===t?TIER_CFG[t].color:"var(--border)"}`,
+              background:tier===t?TIER_CFG[t].bg:"#fff",transition:"all .14s",fontFamily:"var(--sans)"}}>
+              <div style={{fontSize:14,fontWeight:700,color:tier===t?TIER_CFG[t].color:"var(--slate)"}}>{TIER_CFG[t].label}</div>
+              <div style={{fontSize:12,color:"var(--slate)",marginTop:3}}>{TIER_CFG[t].sub}</div>
+            </button>
+          ))}
+        </div>
+        {tier!==suggestedTier&&(
+          <div style={{marginTop:12}}>
+            <label className="lbl">Override Reason</label>
+            <input className="inp" placeholder="Why are you changing from the suggested tier?" value={override} onChange={e=>setOverride(e.target.value)}/>
+          </div>
+        )}
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:20}}>
+        <div>
+          <label className="lbl">Map Lanes (one per line)</label>
+          <textarea className="inp" style={{minHeight:120}} value={lanes} onChange={e=>setLanes(e.target.value)}/>
+          <div style={{fontSize:12,color:"var(--slate)",marginTop:4}}>Default: {cfg.lanes.join(", ")}</div>
+        </div>
+        <div>
+          <label className="lbl">Map Phases (one per line)</label>
+          <textarea className="inp" style={{minHeight:120}} value={phases} onChange={e=>setPhases(e.target.value)}/>
+          <div style={{fontSize:12,color:"var(--slate)",marginTop:4}}>Default: {cfg.phases.join(", ")}</div>
+        </div>
+      </div>
+      <div className="card" style={{padding:"14px 18px",marginBottom:22,background:cfg.bg,borderColor:cfg.bdr}}>
+        <div style={{fontSize:11,fontWeight:700,letterSpacing:".07em",color:cfg.color,fontFamily:"var(--mono)",marginBottom:8}}>REQUIRED DELIVERABLES</div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+          {cfg.deliverables.map(d=><span key={d} className="tag" style={{background:"#fff",color:cfg.color,border:`1px solid ${cfg.bdr}`}}>{d}</span>)}
+        </div>
+      </div>
+      {err&&<div style={{padding:"11px 15px",background:"#fef2f2",border:"1px solid #fecaca",borderRadius:6,fontSize:14,color:"var(--red)",marginBottom:16}}>{err}</div>}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <button className="btn btn-secondary" disabled={gen} onClick={()=>onNext(tier,laneArr,phaseArr,emptyTasks(),override)}>Start with Empty Map</button>
+        <button className="btn btn-primary" disabled={gen||!laneArr.length||!phaseArr.length} onClick={generate}>
+          {gen?<><div style={{width:14,height:14,border:"2px solid rgba(255,255,255,.3)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin .8s linear infinite"}}/>Generating...</>:"✦ Generate Map with AI →"}
+        </button>
+      </div>
+    </div>
+  );
+}
+/* ── Stage 4: Map ── */
+function Stage4({project,tier,initLanes,initPhases,initialTasks}){
+  const cfg=TIER_CFG[tier];
+  const colorRef=useRef(Object.fromEntries(initLanes.map((l,i)=>[l,LANE_PALETTE[i%LANE_PALETTE.length]])));
+  const [tasks,setTasks]=useState(initialTasks);
+  const [lanes,setLanes]=useState(initLanes);
+  const [phases,setPhases]=useState(initPhases);
+  const [phaseDates,setPhaseDates]=useState(()=>Object.fromEntries(initPhases.map(p=>[p,""])));
+  const [visLanes,setVisLanes]=useState(()=>Object.fromEntries(initLanes.map(l=>[l,true])));
+  const [selected,setSelected]=useState(null);
+  const [editTask,setEditTask]=useState(null);
+  const [addingTo,setAddingTo]=useState(null);
+  const [newTask,setNewTask]=useState({label:"",status:"blue",type:"standard",detail:""});
+  const [linkLabel,setLinkLabel]=useState("");
+  const [linkUrl,setLinkUrl]=useState("");
+  const [filterStatus,setFilter]=useState(null);
+  const [depMode,setDepMode]=useState(false);
+  const [sidebarOpen,setSidebarOpen]=useState(true);
+  const [newLaneName,setNewLaneName]=useState("");
+  const [addingLane,setAddingLane]=useState(false);
+  const [newPhaseName,setNewPhaseName]=useState("");
+  const [goLiveDate,setGoLiveDate]=useState(project.date||"");
+  const [addingPhase,setAddingPhase]=useState(false);
+  const lc=lane=>colorRef.current[lane]||"#64748b";
+  const selTask=selected?tasks[selected.lane]?.[selected.phase]?.[selected.idx]:null;
+  const mutate=fn=>setTasks(p=>{const c=JSON.parse(JSON.stringify(p));fn(c);return c;});
+  /* lane ops */
+  const addLane=()=>{
+    const name=newLaneName.trim();if(!name||lanes.includes(name))return;
+    colorRef.current[name]=LANE_PALETTE[lanes.length%LANE_PALETTE.length];
+    setLanes(p=>[...p,name]);
+    setVisLanes(p=>({...p,[name]:true}));
+    mutate(c=>{c[name]={};phases.forEach(ph=>{c[name][ph]=[];});});
+    setNewLaneName("");setAddingLane(false);
+  };
+  const removeLane=lane=>{
+    setLanes(p=>p.filter(l=>l!==lane));
+    setVisLanes(p=>{const c={...p};delete c[lane];return c;});
+    mutate(c=>{delete c[lane];});
+    if(selected?.lane===lane)setSelected(null);
+  };
+  /* phase ops */
+  const addPhase=()=>{
+    const name=newPhaseName.trim();if(!name||phases.includes(name))return;
+    setPhases(p=>[...p,name]);
+    setPhaseDates(p=>({...p,[name]:""}));
+    mutate(c=>{Object.keys(c).forEach(l=>{if(!c[l][name])c[l][name]=[];});});
+    setNewPhaseName("");setAddingPhase(false);
+  };
+  const removePhase=phase=>{
+    setPhases(p=>p.filter(ph=>ph!==phase));
+    setPhaseDates(p=>{const c={...p};delete c[phase];return c;});
+    mutate(c=>{Object.keys(c).forEach(l=>{delete c[l][phase];});});
+    if(selected?.phase===phase)setSelected(null);
+  };
+  /* task ops */
+  const addTask=(lane,phase)=>{
+    if(!newTask.label.trim())return;
+    mutate(c=>{if(!c[lane])c[lane]={};if(!c[lane][phase])c[lane][phase]=[];c[lane][phase].push({...newTask,links:[]});});
+    setNewTask({label:"",status:"blue",type:"standard",detail:""});setAddingTo(null);
+  };
+  const saveEdit=()=>{mutate(c=>{c[selected.lane][selected.phase][selected.idx]=editTask;});setEditTask(null);};
+  const removeTask=()=>{mutate(c=>{c[selected.lane][selected.phase].splice(selected.idx,1);});setSelected(null);};
+  const addLink=()=>{
+    if(!linkLabel.trim()||!linkUrl.trim())return;
+    mutate(c=>{const t=c[selected.lane][selected.phase][selected.idx];if(!t.links)t.links=[];t.links.push({label:linkLabel,url:linkUrl});});
+    setLinkLabel("");setLinkUrl("");setSelected(s=>s?{...s}:s);
+  };
+  const counts={};
+  Object.values(tasks).forEach(lo=>Object.values(lo).forEach(pa=>pa.forEach(t=>{counts[t.status]=(counts[t.status]||0)+1;})));
+  const totalTasks=Object.values(counts).reduce((a,b)=>a+b,0);
+  const visLaneList=lanes.filter(l=>visLanes[l]!==false);
+  const isDepTask=t=>t.type==="precondition"||t.type==="handoff";
+  return(
+    <div style={{display:"flex",height:"100%",overflow:"hidden"}}>
+      {/* sidebar */}
+      {sidebarOpen&&(
+        <div style={{width:220,flexShrink:0,background:"var(--navy)",display:"flex",flexDirection:"column",overflow:"hidden",borderRight:"1px solid rgba(255,255,255,.07)"}}>
+          <div style={{padding:"14px 16px",borderBottom:"1px solid rgba(255,255,255,.08)"}}>
+            <div style={{fontSize:11,fontWeight:700,letterSpacing:".08em",color:"rgba(255,255,255,.35)",fontFamily:"var(--mono)",marginBottom:10}}>WORKSTREAMS</div>
+            <button onClick={()=>{const all=visLaneList.length===lanes.length;setVisLanes(Object.fromEntries(lanes.map(l=>[l,!all])));}}
+              style={{width:"100%",fontSize:12,fontWeight:600,padding:"5px 10px",borderRadius:4,
+                border:"1px solid rgba(255,255,255,.14)",background:"rgba(255,255,255,.05)",
+                color:"rgba(255,255,255,.6)",cursor:"pointer",fontFamily:"var(--sans)",marginBottom:6}}>
+              {visLaneList.length===lanes.length?"Hide All":"Show All"}
+            </button>
+          </div>
+          <div style={{flex:1,overflowY:"auto",padding:"8px 0"}}>
+            {lanes.map((lane)=>{
+              const vis=visLanes[lane]!==false;
+              const c=lc(lane);
+              return(
+                <div key={lane} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 14px",
+                  background:vis?"rgba(255,255,255,.05)":"transparent",
+                  borderLeft:`3px solid ${vis?c:"transparent"}`,transition:"all .13s",marginBottom:1}}>
+                  <label style={{display:"flex",alignItems:"center",gap:7,cursor:"pointer",flex:1,minWidth:0}}>
+                    <input type="checkbox" checked={vis} onChange={()=>setVisLanes(p=>({...p,[lane]:!p[lane]}))}
+                      style={{accentColor:c,width:14,height:14,flexShrink:0}}/>
+                    <span style={{fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",transition:"color .13s",
+                      color:vis?"rgba(255,255,255,.88)":"rgba(255,255,255,.3)"}}>{lane}</span>
+                  </label>
+                  <button onClick={()=>removeLane(lane)}
+                    title="Remove workstream"
+                    style={{background:"none",border:"none",cursor:"pointer",color:"rgba(255,255,255,.18)",
+                      fontSize:18,padding:"0 2px",lineHeight:1,flexShrink:0,transition:"color .13s"}}
+                    onMouseEnter={e=>e.currentTarget.style.color="rgba(220,38,38,.8)"}
+                    onMouseLeave={e=>e.currentTarget.style.color="rgba(255,255,255,.18)"}>×</button>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{padding:"12px 14px",borderTop:"1px solid rgba(255,255,255,.08)"}}>
+            {addingLane?(
+              <div>
+                <input style={{width:"100%",background:"rgba(255,255,255,.09)",border:"1px solid rgba(255,255,255,.18)",
+                  borderRadius:5,padding:"6px 9px",color:"#fff",fontSize:13,fontFamily:"var(--sans)",outline:"none",marginBottom:6}}
+                  placeholder="Workstream name..." autoFocus value={newLaneName}
+                  onChange={e=>setNewLaneName(e.target.value)}
+                  onKeyDown={e=>e.key==="Enter"&&addLane()}/>
+                <div style={{display:"flex",gap:5}}>
+                  <button onClick={addLane} style={{flex:1,fontSize:12,padding:"5px",borderRadius:4,border:"none",background:"var(--blue)",color:"#fff",cursor:"pointer",fontFamily:"var(--sans)",fontWeight:600}}>Add</button>
+                  <button onClick={()=>setAddingLane(false)} style={{flex:1,fontSize:12,padding:"5px",borderRadius:4,border:"1px solid rgba(255,255,255,.14)",background:"transparent",color:"rgba(255,255,255,.45)",cursor:"pointer",fontFamily:"var(--sans)"}}>Cancel</button>
+                </div>
+              </div>
+            ):(
+              <button onClick={()=>setAddingLane(true)}
+                style={{width:"100%",fontSize:12,fontWeight:600,padding:"6px 10px",borderRadius:5,
+                  border:"1px dashed rgba(255,255,255,.18)",background:"transparent",
+                  color:"rgba(255,255,255,.4)",cursor:"pointer",fontFamily:"var(--sans)",
+                  display:"flex",alignItems:"center",gap:5,justifyContent:"center"}}>
+                + Add Workstream
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+      {/* main panel */}
+      <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",minWidth:0}}>
+        {/* header bar */}
+        <div style={{padding:"10px 16px",background:"#fff",borderBottom:"1px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0,gap:12,flexWrap:"wrap"}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
+            <button onClick={()=>setSidebarOpen(p=>!p)}
+              style={{background:"var(--off)",border:"1px solid var(--border)",borderRadius:5,padding:"5px 10px",cursor:"pointer",fontSize:13,color:"var(--slate)",flexShrink:0}}>
+              {sidebarOpen?"◀":"▶"}
+            </button>
+            <div style={{minWidth:0}}>
+              <div style={{fontSize:11,fontWeight:700,letterSpacing:".07em",fontFamily:"var(--mono)",color:TIER_CFG[tier].color}}>
+                {TIER_CFG[tier].label.toUpperCase()} · {TIER_CFG[tier].sub.toUpperCase()}
+              </div>
+              <div style={{fontFamily:"var(--serif)",fontSize:17,color:"var(--navy)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{project.name}</div>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0,borderLeft:"1px solid var(--border)",paddingLeft:12,marginLeft:4}}>
+              <span style={{fontSize:11,fontWeight:700,letterSpacing:".07em",fontFamily:"var(--mono)",color:"var(--slate)",whiteSpace:"nowrap"}}>GO-LIVE</span>
+              <input type="date" value={goLiveDate} onChange={e=>setGoLiveDate(e.target.value)}
+                style={{fontSize:13,fontFamily:"var(--mono)",color:goLiveDate?"var(--navy)":"var(--slate)",
+                  border:"1px solid var(--border)",borderRadius:4,padding:"3px 6px",
+                  background:"transparent",outline:"none",cursor:"pointer",width:140}}/>
+            </div>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+            {/* dep toggle */}
+            <button onClick={()=>setDepMode(p=>!p)}
+              style={{display:"flex",alignItems:"center",gap:5,padding:"4px 11px",borderRadius:4,cursor:"pointer",transition:"all .13s",
+                background:depMode?"#faf5ff":"transparent",
+                border:`1px solid ${depMode?"#7c3aed":"var(--border)"}`,
+                fontSize:11,fontWeight:700,fontFamily:"var(--mono)",
+                color:depMode?"#7c3aed":"var(--slate)"}}>
+              ⬡ Deps {depMode?"ON":"OFF"}
+            </button>
+            {/* ALL */}
+            <button onClick={()=>setFilter(null)}
+              style={{display:"flex",alignItems:"center",gap:5,padding:"4px 11px",borderRadius:4,cursor:"pointer",transition:"all .13s",
+                background:filterStatus===null?"var(--navy)":"transparent",
+                border:`1px solid ${filterStatus===null?"var(--navy)":"var(--border)"}`,
+                fontSize:11,fontWeight:700,fontFamily:"var(--mono)",
+                color:filterStatus===null?"#fff":"var(--slate)"}}>
+              ALL ({totalTasks})
+            </button>
+            {cfg.statuses.map(s=>{
+              const m=STATUS_META[s];const active=filterStatus===s;
+              return(
+                <button key={s} onClick={()=>setFilter(active?null:s)}
+                  style={{display:"flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:4,cursor:"pointer",transition:"all .13s",
+                    background:active?m.bg:"transparent",border:`1px solid ${active?m.color:"var(--border)"}`}}>
+                  <div style={{width:7,height:7,borderRadius:"50%",background:m.dot}}/>
+                  <span style={{fontSize:11,fontWeight:700,fontFamily:"var(--mono)",color:active?m.color:"var(--slate)"}}>{m.label}{counts[s]?` (${counts[s]})`:""}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        {/* dep banner */}
+        {depMode&&(
+          <div style={{padding:"6px 16px",background:"#faf5ff",borderBottom:"1px solid #e9d5ff",fontSize:13,color:"#7c3aed",fontWeight:600,flexShrink:0}}>
+            ⬡ Dependency view — <strong>Precondition</strong> tasks (purple border) block downstream work · <strong>Handoff</strong> tasks transfer ownership between workstreams
+          </div>
+        )}
+        {/* grid */}
+        <div style={{flex:1,overflowX:"auto",overflowY:"auto"}}>
+          <table style={{borderCollapse:"collapse",tableLayout:"fixed",minWidth:"100%"}}>
+            <colgroup>
+              <col style={{width:160}}/>
+              {phases.map((_,i)=><col key={i} style={{width:210}}/>)}
+              <col style={{width:56}}/>
+            </colgroup>
+            <thead>
+              <tr>
+                <th style={{background:"var(--navy)",padding:"10px 14px",textAlign:"left",fontSize:11,fontWeight:700,
+                  letterSpacing:".07em",color:"rgba(255,255,255,.4)",fontFamily:"var(--mono)",
+                  position:"sticky",left:0,zIndex:3,borderRight:"1px solid rgba(255,255,255,.08)"}}>
+                  WORKSTREAM
+                </th>
+                {phases.map((ph,pi)=>(
+                  <th key={pi} style={{background:"var(--navy)",padding:0,textAlign:"left",verticalAlign:"top",
+                    borderRight:pi<phases.length-1?"1px solid rgba(255,255,255,.07)":"none"}}>
+                    <div style={{padding:"9px 14px 7px"}}>
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
+                        <span style={{fontSize:13,fontWeight:700,color:"#fff",fontFamily:"var(--sans)"}}>{ph}</span>
+                        <button onClick={()=>removePhase(ph)} title="Remove phase"
+                          style={{background:"none",border:"none",cursor:"pointer",color:"rgba(255,255,255,.2)",fontSize:16,padding:"0 2px",lineHeight:1,transition:"color .13s"}}
+                          onMouseEnter={e=>e.currentTarget.style.color="rgba(220,38,38,.8)"}
+                          onMouseLeave={e=>e.currentTarget.style.color="rgba(255,255,255,.2)"}>×</button>
+                      </div>
+                      <input type="date" value={phaseDates[ph]||""}
+                        onChange={e=>setPhaseDates(p=>({...p,[ph]:e.target.value}))}
+                        style={{width:"100%",background:"rgba(255,255,255,.07)",border:"1px solid rgba(255,255,255,.11)",
+                          borderRadius:4,padding:"3px 6px",color:"rgba(255,255,255,.65)",fontSize:11,
+                          fontFamily:"var(--mono)",outline:"none",colorScheme:"dark"}}/>
+                    </div>
+                  </th>
+                ))}
+                {/* add phase */}
+                <th style={{background:"var(--navy)",padding:"8px",verticalAlign:"middle"}}>
+                  {addingPhase?(
+                    <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                      <input style={{width:"100%",background:"rgba(255,255,255,.09)",border:"1px solid rgba(255,255,255,.18)",
+                        borderRadius:4,padding:"4px 6px",color:"#fff",fontSize:12,fontFamily:"var(--sans)",outline:"none"}}
+                        placeholder="Phase..." autoFocus value={newPhaseName}
+                        onChange={e=>setNewPhaseName(e.target.value)}
+                        onKeyDown={e=>e.key==="Enter"&&addPhase()}/>
+                      <div style={{display:"flex",gap:3}}>
+                        <button onClick={addPhase} style={{flex:1,fontSize:11,padding:"3px",borderRadius:3,border:"none",background:"var(--blue)",color:"#fff",cursor:"pointer"}}>✓</button>
+                        <button onClick={()=>setAddingPhase(false)} style={{flex:1,fontSize:11,padding:"3px",borderRadius:3,border:"1px solid rgba(255,255,255,.14)",background:"transparent",color:"rgba(255,255,255,.4)",cursor:"pointer"}}>✕</button>
+                      </div>
+                    </div>
+                  ):(
+                    <button onClick={()=>setAddingPhase(true)} title="Add phase"
+                      style={{width:"100%",height:42,background:"none",border:"1px dashed rgba(255,255,255,.18)",
+                        borderRadius:4,color:"rgba(255,255,255,.3)",cursor:"pointer",fontSize:20}}>+</button>
+                  )}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {visLaneList.map((lane,li)=>(
+                <tr key={lane} style={{borderBottom:"1px solid var(--border)"}}>
+                  <td style={{background:`${lc(lane)}0f`,padding:"10px 14px",verticalAlign:"top",
+                    position:"sticky",left:0,zIndex:2,
+                    borderLeft:`4px solid ${lc(lane)}`,
+                    borderRight:"1px solid var(--border)",
+                    boxShadow:"2px 0 4px rgba(0,0,0,.04)"}}>
+                    <div style={{fontSize:13,fontWeight:700,color:"var(--navy)",lineHeight:1.3}}>{lane}</div>
+                  </td>
+                  {phases.map((phase,pi)=>{
+                    const allT=tasks[lane]?.[phase]||[];
+                    const cellT=filterStatus?allT.filter(t=>t.status===filterStatus):allT;
+                    return(
+                      <td key={pi} style={{background:li%2===0?`${lc(lane)}07`:"#fff",padding:"7px",verticalAlign:"top",
+                        borderRight:pi<phases.length-1?"1px solid var(--border)":"none"}}>
+                        <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                          {cellT.map(task=>{
+                            const realIdx=allT.indexOf(task);
+                            const m=STATUS_META[task.status]||STATUS_META.blue;
+                            const isSel=selected?.lane===lane&&selected?.phase===phase&&selected?.idx===realIdx;
+                            const isDep=depMode&&isDepTask(task);
+                            return(
+                              <div key={realIdx}
+                                onClick={()=>setSelected(isSel?null:{lane,phase,idx:realIdx})}
+                                style={{position:"relative",
+                                  background:isSel?m.bg:isDep?"#faf5ff":"#fff",
+                                  border:`1px solid ${isSel?m.color:isDep?"#c4b5fd":"var(--border)"}`,
+                                  borderLeft:`3px solid ${isDep?"#7c3aed":m.dot}`,
+                                  borderRadius:5,padding:"6px 8px",cursor:"pointer",transition:"all .13s",
+                                  boxShadow:isDep?"0 0 0 1px rgba(124,58,237,.12)":isSel?`0 0 0 2px ${m.color}22`:"none"}}>
+                                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:4}}>
+                                  <span style={{fontSize:13,fontWeight:600,color:"var(--navy)",lineHeight:1.3}}>{task.label}</span>
+                                  <span style={{fontSize:9,fontFamily:"var(--mono)",fontWeight:700,color:m.color,background:m.bg,padding:"2px 5px",borderRadius:2,whiteSpace:"nowrap",flexShrink:0}}>
+                                    {m.label.toUpperCase()}
+                                  </span>
+                                </div>
+                                {task.type!=="standard"&&(
+                                  <div style={{fontSize:10,fontFamily:"var(--mono)",marginTop:3,
+                                    color:depMode?"#7c3aed":"var(--slate)",fontWeight:depMode?700:400}}>
+                                    {task.type==="precondition"?"⬡ precondition":"→ handoff"}
+                                  </div>
+                                )}
+                                {task.links?.length>0&&<div style={{fontSize:10,color:"var(--blue)",marginTop:3}}>📄 {task.links.length} link{task.links.length>1?"s":""}</div>}
+                              </div>
+                            );
+                          })}
+                          {addingTo?.lane===lane&&addingTo?.phase===phase?(
+                            <div style={{border:"1px dashed var(--blue)",borderRadius:5,padding:8,background:"#f8fbff"}}>
+                              <input className="inp" style={{fontSize:13,marginBottom:6,padding:"5px 8px"}}
+                                placeholder="Task name..." autoFocus
+                                value={newTask.label} onChange={e=>setNewTask(p=>({...p,label:e.target.value}))}
+                                onKeyDown={e=>e.key==="Enter"&&addTask(lane,phase)}/>
+                              <div style={{display:"flex",gap:5,marginBottom:6}}>
+                                <select className="inp" style={{fontSize:12,padding:"4px 6px",flex:1}} value={newTask.status} onChange={e=>setNewTask(p=>({...p,status:e.target.value}))}>
+                                  {cfg.statuses.map(s=><option key={s} value={s}>{STATUS_META[s].label}</option>)}
+                                </select>
+                                <select className="inp" style={{fontSize:12,padding:"4px 6px",flex:1}} value={newTask.type} onChange={e=>setNewTask(p=>({...p,type:e.target.value}))}>
+                                  <option value="standard">Standard</option>
+                                  <option value="precondition">Precondition</option>
+                                  <option value="handoff">Handoff</option>
+                                </select>
+                              </div>
+                              <div style={{display:"flex",gap:5}}>
+                                <button className="btn btn-primary" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>addTask(lane,phase)}>Add</button>
+                                <button className="btn btn-ghost" style={{fontSize:12,padding:"4px 10px"}} onClick={()=>setAddingTo(null)}>Cancel</button>
+                              </div>
+                            </div>
+                          ):(
+                            <button onClick={()=>{setAddingTo({lane,phase});setSelected(null);}}
+                              style={{fontSize:12,color:"var(--slate)",background:"transparent",border:"1px dashed #e2e8f0",
+                                borderRadius:4,padding:"4px 7px",cursor:"pointer",transition:"all .13s",
+                                fontFamily:"var(--sans)",display:"flex",alignItems:"center",gap:4}}
+                              onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--blue)";e.currentTarget.style.color="var(--blue)";}}
+                              onMouseLeave={e=>{e.currentTarget.style.borderColor="#e2e8f0";e.currentTarget.style.color="var(--slate)";}}>
+                              + add task
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    );
+                  })}
+                  <td style={{background:`${lc(lane)}07`}}/>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {/* drawer */}
+        {selected&&selTask&&(
+          <div style={{flexShrink:0,background:"#fff",borderTop:`3px solid ${(STATUS_META[selTask.status]||STATUS_META.blue).color}`,
+            padding:"15px 18px",maxHeight:320,overflowY:"auto",
+            animation:"popUp .22s cubic-bezier(.34,1.56,.64,1) both"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:14,marginBottom:11}}>
+              <div style={{flex:1}}>
+                {editTask
+                  ?<input className="inp" style={{fontWeight:700,fontSize:16}} value={editTask.label} onChange={e=>setEditTask(p=>({...p,label:e.target.value}))}/>
+                  :<div style={{fontSize:16,fontWeight:700,color:"var(--navy)",lineHeight:1.3}}>{selTask.label}</div>
+                }
+                <div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap"}}>
+                  {[
+                    {bg:(STATUS_META[selTask.status]||STATUS_META.blue).bg,color:(STATUS_META[selTask.status]||STATUS_META.blue).color,text:`● ${(STATUS_META[selTask.status]||STATUS_META.blue).label}`},
+                    {bg:"#f8fafc",color:"var(--slate)",text:selTask.type,bdr:"1px solid var(--border)"},
+                    {bg:"#f8fafc",color:"var(--slate)",text:`${selected.lane} · ${selected.phase}`,bdr:"1px solid var(--border)"},
+                  ].map((t,i)=><span key={i} className="tag" style={{background:t.bg,color:t.color,border:t.bdr||"none"}}>{t.text}</span>)}
+                </div>
+              </div>
+              <div style={{display:"flex",gap:6,flexShrink:0}}>
+                {editTask?(
+                  <>
+                    <button className="btn btn-primary" style={{fontSize:12,padding:"5px 11px"}} onClick={saveEdit}>Save</button>
+                    <button className="btn btn-secondary" style={{fontSize:12,padding:"5px 11px"}} onClick={()=>setEditTask(null)}>Cancel</button>
+                  </>
+                ):(
+                  <>
+                    <button className="btn btn-secondary" style={{fontSize:12,padding:"5px 11px"}} onClick={()=>setEditTask({...selTask})}>Edit</button>
+                    <button className="btn btn-danger" style={{fontSize:12,padding:"5px 11px"}} onClick={removeTask}>Remove</button>
+                    <button className="btn btn-ghost" style={{fontSize:12}} onClick={()=>setSelected(null)}>✕</button>
+                  </>
+                )}
+              </div>
+            </div>
+            {editTask?(
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 2fr",gap:10,marginBottom:11}}>
+                <div>
+                  <label className="lbl">Status</label>
+                  <select className="inp" style={{fontSize:13}} value={editTask.status} onChange={e=>setEditTask(p=>({...p,status:e.target.value}))}>
+                    {cfg.statuses.map(s=><option key={s} value={s}>{STATUS_META[s].label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="lbl">Type</label>
+                  <select className="inp" style={{fontSize:13}} value={editTask.type} onChange={e=>setEditTask(p=>({...p,type:e.target.value}))}>
+                    <option value="standard">Standard</option>
+                    <option value="precondition">Precondition</option>
+                    <option value="handoff">Handoff</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="lbl">Detail Text</label>
+                  <textarea className="inp" style={{fontSize:13,minHeight:58}} value={editTask.detail} onChange={e=>setEditTask(p=>({...p,detail:e.target.value}))}/>
+                </div>
+              </div>
+            ):(
+              <div style={{fontSize:14,color:"var(--slate)",lineHeight:1.7,marginBottom:11}}>
+                {selTask.detail||<em style={{color:"#94a3b8"}}>No detail yet — click Edit to add context.</em>}
+              </div>
+            )}
+            {!editTask&&(
+              <div style={{borderTop:"1px solid var(--border)",paddingTop:10}}>
+                <div style={{fontSize:11,fontWeight:700,letterSpacing:".07em",color:"var(--slate)",fontFamily:"var(--mono)",marginBottom:6}}>LINKED DOCUMENTS</div>
+                {(selTask.links||[]).length>0&&(
+                  <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:8}}>
+                    {(selTask.links||[]).map((lk,li)=>(
+                      <a key={li} href={lk.url} target="_blank" rel="noopener noreferrer"
+                        style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:13,fontWeight:600,
+                          color:"var(--blue)",background:"#eff6ff",border:"1px solid #bfdbfe",
+                          borderRadius:4,padding:"4px 10px",textDecoration:"none"}}>
+                        📄 {lk.label} ↗
+                      </a>
+                    ))}
+                  </div>
+                )}
+                <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                  <input className="inp" style={{fontSize:13,padding:"5px 8px",flex:"0 0 140px"}} placeholder="Label" value={linkLabel} onChange={e=>setLinkLabel(e.target.value)}/>
+                  <input className="inp" style={{fontSize:13,padding:"5px 8px",flex:1}} placeholder="https://..." value={linkUrl} onChange={e=>setLinkUrl(e.target.value)}/>
+                  <button className="btn btn-secondary" style={{fontSize:12,padding:"5px 11px",flexShrink:0}} onClick={addLink}>+ Add</button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+/* ── Root ── */
+function App(){
+  const [stage,setStage]=useState(0);
+  const [project,setProject]=useState(null);
+  const [sTier,setSTier]=useState(null);
+  const [mapCfg,setMapCfg]=useState(null);
+  const [apiKey,setApiKey]=useState("");
+  const [showKey,setShowKey]=useState(false);
+  const reset=()=>{setStage(0);setProject(null);setSTier(null);setMapCfg(null);};
+  return(
+    <div style={{display:"flex",flexDirection:"column",height:"100vh",background:"var(--off)"}}>
+      <div style={{background:"var(--navy)",padding:"10px 22px",display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
+        <div style={{display:"flex",alignItems:"center",gap:16}}>
+          <div style={{display:"flex",flexDirection:"column",gap:1}}>
+            <span style={{fontFamily:"var(--serif)",fontSize:17,color:"#fff",lineHeight:1}}>Readiness Map</span>
+            <span style={{fontFamily:"var(--mono)",fontSize:10,color:"rgba(255,255,255,.3)",letterSpacing:".1em"}}>BUILDER · v2.0</span>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:10,alignItems:"center"}}>
+          {/* API Key input */}
+          <div style={{display:"flex",alignItems:"center",gap:6,background:"rgba(255,255,255,.07)",border:"1px solid rgba(255,255,255,.14)",borderRadius:6,padding:"4px 10px"}}>
+            <span style={{fontSize:11,fontWeight:700,fontFamily:"var(--mono)",color:"rgba(255,255,255,.4)",whiteSpace:"nowrap"}}>API KEY</span>
+            <input
+              type={showKey?"text":"password"}
+              placeholder="sk-ant-..."
+              value={apiKey}
+              onChange={e=>setApiKey(e.target.value)}
+              style={{background:"transparent",border:"none",outline:"none",color:"#fff",fontSize:12,fontFamily:"var(--mono)",width:180}}
+            />
+            <button onClick={()=>setShowKey(p=>!p)}
+              style={{background:"none",border:"none",cursor:"pointer",color:"rgba(255,255,255,.35)",fontSize:13,padding:"0 2px",lineHeight:1}}>
+              {showKey?"🙈":"👁"}
+            </button>
+          </div>
+          {stage>0&&stage<3&&<button className="btn btn-ghost" style={{color:"rgba(255,255,255,.55)",fontSize:13}} onClick={()=>setStage(s=>s-1)}>← Back</button>}
+          {stage===3&&<button className="btn btn-ghost" style={{color:"rgba(255,255,255,.55)",fontSize:13}} onClick={reset}>↺ New Project</button>}
+        </div>
+      </div>
+      {stage===3?(
+        <div style={{flex:1,display:"flex",overflow:"hidden"}}>
+          <Stage4 project={project} tier={mapCfg.tier} initLanes={mapCfg.lanes} initPhases={mapCfg.phases} initialTasks={mapCfg.tasks}/>
+        </div>
+      ):(
+        <div style={{flex:1,overflowY:"auto",padding:"32px 0"}}>
+          <div style={{maxWidth:720,margin:"0 auto",padding:"0 28px"}}>
+            <Steps current={stage}/>
+            {stage===0&&<Stage1 onNext={f=>{setProject(f);setStage(1);}}/>}
+            {stage===1&&<Stage2 project={project} onNext={(sc,t)=>{setSTier(t);setStage(2);}}/>}
+            {stage===2&&<Stage3 project={project} suggestedTier={sTier} apiKey={apiKey}
+              onNext={(t,l,p,tk,ov)=>{setMapCfg({tier:t,lanes:l,phases:p,tasks:tk,override:ov});setStage(3);}}/>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
